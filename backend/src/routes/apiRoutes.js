@@ -1,64 +1,10 @@
-// 后端示例 (Node.js + Express)
-// routes/keys.js
-const express = require('express');
-const crypto = require('crypto');
-const router = express.Router();
-
-// 验证卡密
-router.post('/verify', async (req, res) => {
-  const { key } = req.body;
-  
-  try {
-    // 从数据库查询卡密
-    const { data, error } = await supabase
-      .from('agent_keys')
-      .select('*')
-      .eq('key', key)
-      .single();
-      
-    if (error || !data || !data.is_active) {
-      return res.json({ valid: false, message: '无效的卡密' });
-    }
-    
-    // 检查是否是管理员卡密
-    if (data.is_admin) {
-      return res.json({ valid: true, isAdmin: true });
-    }
-    
-    // 获取客服信息
-    const { data: agentData, error: agentError } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('id', data.agent_id)
-      .single();
-      
-    if (agentError || !agentData) {
-      return res.json({ valid: false, message: '找不到客服信息' });
-    }
-    
-    return res.json({
-      valid: true,
-      isAdmin: false,
-      agentId: data.agent_id,
-      agentData: {
-        id: agentData.id,
-        nickname: agentData.nickname,
-        avatar: agentData.avatar,
-        status: agentData.status
-      }
-    });
-  } catch (error) {
-    console.error('验证卡密失败:', error);
-    return res.status(500).json({ valid: false, message: '服务器错误' });
-  }
-});
-
 // src/routes/apiRoutes.js
 const express = require('express');
 const router = express.Router();
 const supabase = require('../utils/supabaseClient');
 const { authenticateApiKey, requireAdmin } = require('../middlewares/auth');
 const { AppError } = require('../middlewares/error');
+const { nanoid } = require('nanoid');
 
 // 所有API路由都需要API密钥认证
 router.use(authenticateApiKey);
@@ -192,7 +138,6 @@ router.post('/share-links', async (req, res, next) => {
     const { expiryDays = 7 } = req.body;
     
     // 生成唯一的短链接代码
-    const { nanoid } = require('nanoid');
     const linkCode = nanoid(8);
     
     // 设置过期时间
@@ -204,108 +149,28 @@ router.post('/share-links', async (req, res, next) => {
     const { data, error } = await supabase
       .from('share_links')
       .insert({
-        id: nanoid(),
-        code: linkCode,
+        id: linkCode,
         agent_id: agentId,
         created_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
-        access_count: 0,
-        is_active: true
+        is_active: true,
+        access_count: 0
       })
       .select()
       .single();
       
     if (error) {
-      throw new AppError('创建分享链接失败', 500, 'CREATE_LINK_ERROR');
+      throw new AppError('生成分享链接失败', 500, 'CREATE_SHARELINK_ERROR');
     }
-    
-    // 更新客服的当前分享链接
-    await supabase
-      .from('agents')
-      .update({ share_link_id: data.id })
-      .eq('id', agentId);
     
     return res.json({
       success: true,
       data: {
         id: data.id,
-        code: data.code,
-        expiresAt: data.expires_at,
-        url: `${req.protocol}://${req.get('host')}/chat/${data.code}`
+        code: data.id,
+        url: `${req.protocol}://${req.get('host')}/chat/${data.id}`,
+        expiresAt: data.expires_at
       }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// 获取客服的分享链接
-router.get('/share-links', async (req, res, next) => {
-  try {
-    const agentId = req.user.id;
-    
-    // 查询客服的所有分享链接
-    const { data, error } = await supabase
-      .from('share_links')
-      .select('*')
-      .eq('agent_id', agentId)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      throw new AppError('获取分享链接失败', 500, 'FETCH_LINKS_ERROR');
-    }
-    
-    // 格式化数据
-    const formattedLinks = data.map(link => ({
-      id: link.id,
-      code: link.code,
-      url: `${req.protocol}://${req.get('host')}/chat/${link.code}`,
-      createdAt: link.created_at,
-      expiresAt: link.expires_at,
-      accessCount: link.access_count || 0,
-      isActive: link.is_active
-    }));
-    
-    return res.json({
-      success: true,
-      data: formattedLinks
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// 禁用分享链接
-router.put('/share-links/:id/deactivate', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const agentId = req.user.id;
-    
-    // 验证链接是否属于当前客服
-    const { data: linkData, error: linkError } = await supabase
-      .from('share_links')
-      .select('*')
-      .eq('id', id)
-      .eq('agent_id', agentId)
-      .single();
-      
-    if (linkError || !linkData) {
-      throw new AppError('分享链接不存在或无权操作', 404, 'LINK_NOT_FOUND');
-    }
-    
-    // 禁用链接
-    const { error } = await supabase
-      .from('share_links')
-      .update({ is_active: false })
-      .eq('id', id);
-      
-    if (error) {
-      throw new AppError('禁用分享链接失败', 500, 'DEACTIVATE_LINK_ERROR');
-    }
-    
-    return res.json({
-      success: true,
-      message: '分享链接已禁用'
     });
   } catch (error) {
     next(error);

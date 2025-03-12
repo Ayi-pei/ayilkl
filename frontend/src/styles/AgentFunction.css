@@ -323,3 +323,70 @@
   .ant-drawer-body {
     padding: 16px;
   }
+
+  /* ... 现有样式 ... */
+
+/* 卡密信息样式 */
+.license-info {
+  padding: 8px 16px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.license-key {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.license-expiry {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.expiry-tag {
+  margin-left: 8px;
+}
+
+/* 分享链接模态框样式 */
+.share-modal-content {
+  padding: 16px;
+}
+
+.share-link {
+  margin-bottom: 16px;
+}
+
+.copy-button {
+  margin-top: 8px;
+}
+
+.qr-code {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.share-tips {
+  margin-top: 16px;
+  color: #666;
+}
+
+/* 链接列表样式 */
+.link-title {
+  display: flex;
+  align-items: center;
+}
+
+.link-description {
+  font-size: 12px;
+  color: #666;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}

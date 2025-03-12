@@ -7,7 +7,12 @@ const { createClient } = require('@supabase/supabase-js');
 
 // 初始化Express应用
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:5173'], 
+  credentials: true, 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key']
+}));
 app.use(express.json());
 
 // 创建HTTP服务器
@@ -22,8 +27,8 @@ const io = new Server(server, {
 });
 
 // 初始化Supabase客户端
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://zmjyodxdvctygjphghxy.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptanlvZHhkdmN0eWdqcGhnaHh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NzY1NTQsImV4cCI6MjA1NzA1MjU1NH0.P5cG0-S4pS1ul7U8FlEBrMIe81r8chWyplkhnSVtJGE';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 存储用户连接
@@ -266,12 +271,12 @@ app.post('/api/verify-key', async (req, res) => {
 // 启动服务器
 // server.js
 require('dotenv').config();
-const { server } = require('./src/app');
+const { server: appServer } = require('./src/app');
 const config = require('./src/config');
 
 const PORT = config.port || 3001;
 
-server.listen(PORT, () => {
+appServer.listen(PORT, () => {
   console.log(`服务器已启动，监听端口 ${PORT}`);
   console.log(`环境: ${config.nodeEnv || 'development'}`);
 });

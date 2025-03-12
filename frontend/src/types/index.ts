@@ -1,15 +1,124 @@
 // src/types/index.ts - 主要类型定义
 
-// 消息类型
+// 预设的30个nanoid密钥，可以根据日期轮换使用
+export const PRESET_KEYS = [
+  'ayi_key_1_nanoId8x7z2c9v',
+  'ayi_key_2_nanoId5q8w3e1r',
+  'ayi_key_3_nanoId7t4y6u2i',
+  'ayi_key_4_nanoId3o9p1a5s',
+  'ayi_key_5_nanoId6d4f2g7h',
+  'ayi_key_6_nanoId9j5k1l3z',
+  'ayi_key_7_nanoId2x4c6v8b',
+  'ayi_key_8_nanoId7n9m3q1w',
+  'ayi_key_9_nanoId5e2r4t6y',
+  'ayi_key_10_nanoId8u1i3o5p',
+  'ayi_key_11_nanoId4a7s9d2f',
+  'ayi_key_12_nanoId6g3h5j1k',
+  'ayi_key_13_nanoId8l4z6x2c',
+  'ayi_key_14_nanoId9v7b3n5m',
+  'ayi_key_15_nanoId2q4w6e8r',
+  'ayi_key_16_nanoId1t3y5u7i',
+  'ayi_key_17_nanoId9o2p4a6s',
+  'ayi_key_18_nanoId3d5f7g9h',
+  'ayi_key_19_nanoId1j3k5l7z',
+  'ayi_key_20_nanoId8x2c4v6b',
+  'ayi_key_21_nanoId5n7m9q1w',
+  'ayi_key_22_nanoId3e5r7t9y',
+  'ayi_key_23_nanoId1u3i5o7p',
+  'ayi_key_24_nanoId8a2s4d6f',
+  'ayi_key_25_nanoId5g7h9j1k',
+  'ayi_key_26_nanoId3l5z7x9c',
+  'ayi_key_27_nanoId1v3b5n7m',
+  'ayi_key_28_nanoId8q2w4e6r',
+  'ayi_key_29_nanoId5t7y9u1i',
+  'ayi_key_30_nanoId3o5p7a9s',
+];
+
+// 获取今日密钥的辅助函数
+export const getTodayPresetKey = (index = 0): string => {
+  const today = new Date();
+  const dayOfMonth = today.getDate();
+  const keyIndex = (dayOfMonth + index) % PRESET_KEYS.length;
+  return PRESET_KEYS[keyIndex];
+};
+
+// 检查密钥是否为今日有效密钥
+export const isValidTodayKey = (key: string): boolean => {
+  for (let i = 0; i < 30; i++) {
+    if (getTodayPresetKey(i) === key) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// 密钥域名映射常量
+export const KEY_DOMAIN_MAPPING = {
+  CHAT: 'chat_domain',
+  ADMIN: 'admin_domain',
+  USER: 'user_domain',
+  AGENT: 'agent_domain',
+  SYSTEM: 'system_domain',
+};
+
+// 为核心组件定义特定的类名前缀
+export const COMPONENT_CLASS_PREFIX = {
+  CHAT_PAGE: 'ayi-chat-page',
+  ADMIN_PAGE: 'ayi-admin-page',
+  LOGIN_PAGE: 'ayi-login-page',
+  AGENT_FUNCTION: 'ayi-agent-function',
+  USER_FUNCTION: 'ayi-user-function',
+};
+
+// 为不同域定义nanoid前缀
+export const NANOID_PREFIX = {
+  CHAT: 'chat_',
+  USER: 'user_',
+  AGENT: 'agent_',
+  ADMIN: 'admin_',
+  MESSAGE: 'msg_',
+  QUICK_REPLY: 'qr_',
+  LINK: 'link_',
+  KEY: 'key_',
+};
+
+// 生成带前缀的nanoid的辅助函数
+export const generatePrefixedId = (prefix: string, length = 10): string => {
+  // 这里实际使用时需要导入nanoid
+  // 为了类型定义，这里只返回一个字符串
+  return `${prefix}${Math.random().toString(36).substring(2, 2 + length)}`;
+};
+
+// 统一 UserType 定义
+export type UserType = 'admin' | 'agent' | 'user' | null;
+
+// 统一 AgentData 接口
+export interface AgentData {
+  id: string;
+  nickname?: string;
+  avatar?: string;
+  status?: string;
+  [key: string]: unknown; // 允许其他未知字段
+}
+
+// 统一 Message 接口
 export interface Message {
   id: string;
   content: string;
-  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe';
-  sender: 'user' | 'agent' | 'customer'; // 添加 'customer' 类型
+  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system';
+  sender: 'user' | 'agent' | 'customer' | 'system';
   recipientId?: string;
   fileName?: string;
   fileSize?: number;
   timestamp: string;
+  [key: string]: unknown; // 允许其他未知字段
+}
+
+// 客户状态数据
+export interface CustomerStatusData {
+  customerId: string;
+  isOnline: boolean;
+  lastSeen?: string;
 }
 
 // 客户类型
@@ -18,115 +127,85 @@ export interface Customer {
   nickname: string;
   avatar: string;
   isOnline: boolean;
-  lastSeen: string; // 保持为string类型
+  lastSeen: string;
   ip: string;
   device: string;
-  firstVisit: string; // 保持为string类型
+  firstVisit: string;
+  unreadCount?: number;
 }
 
-// 方案2: 如果将来会添加特定属性，可以先添加注释 Customer
-export interface BlacklistedUser {
-  id: string;
-  nickname: string;
-  avatar?: string;
-  reason: string; // 必须包含
-  createdAt: string; // 必须包含
-  ip: string;
-  device: string;
-  isOnline: boolean;
-  lastSeen: string; // 修改为string类型，与Customer保持一致
-  firstVisit: string; // 修改为string类型，与Customer保持一致
-  blacklistedAt?: string;
-
-}
-// 快捷回复
-export interface QuickReply {
-  id: string;
-  title: string;
-  content: string;
+// 统一 WebSocket 相关接口
+export interface WebSocketMessageBase {
+  type: string;
+  data?: Record<string, unknown>;
+  message?: Message;
+  customerId?: string;
+  agentId?: string;
+  status?: string;
+  timestamp?: string;
+  error?: string;
+  customersList?: Customer[];
 }
 
-// 客服设置
-export interface AgentSettings {
-  id: string;
-  key: string;
-  expiryTime: string;
-  nickname: string;
-  avatar: string;
-  status: 'online' | 'away' | 'busy';
+// 具体 WebSocket 消息类型
+export interface WebSocketMessage extends WebSocketMessageBase {
+  type: 
+    | 'auth' 
+    | 'message'
+    | 'chat_message'
+    | 'customer_online' 
+    | 'customer_offline' 
+    | 'customer_status'
+    | 'agent_status'
+    | 'ping'
+    | 'pong'
+    | 'error'
+    | 'customers_list'
+    | string;  // 兼容其他可能的类型
 }
 
-// 用户设置
-export interface UserSettings {
-  id: string;
-  nickname: string;
-  avatar: string;
-}
-
-// WebSocket消息结构
-// 更好的方案：为不同消息类型定义特定的数据结构
-export interface WebSocketMessage {
- type: 
-   | 'auth' 
-   | 'message' 
-   | 'customer_online' 
-   | 'customer_offline' 
-   | 'agent_status'
-   | 'ping'
-   | 'pong'
-   | 'error'
-   | 'customers_list';  // 添加customers_list类型
- data?: WebSocketMessageData;
- message?: Message;
- customerId?: string;
- agentId?: string;
- status?: string;
- timestamp?: string;
- error?: string;
- customersList?: Customer[];  // 添加customersList字段
-}
-
-// 为每种消息类型定义特定的数据类型
+// WebSocket 消息数据类型
 export type WebSocketMessageData = 
- | AuthData
- | MessageData
- | CustomerStatusData
- | AgentStatusData
- | PingPongData
- | ErrorData;
+  | AuthData
+  | MessageData
+  | CustomerStatusData
+  | AgentStatusData
+  | PingPongData
+  | ErrorData
+  | Record<string, unknown>;  // 兼容其他数据类型
 
 export interface AuthData {
- token: string;
- userId?: string;
- userType?: 'agent' | 'user' | 'admin';  // 添加userType字段
- id?: string;  // 添加id字段
+  token: string;
+  userId?: string;
+  userType?: UserType;  // 使用统一的 UserType
+  id?: string;
 }
 
 export interface MessageData {
- id: string;
- content: string;
- // 其他消息特定字段
-}
-
-export interface CustomerStatusData {
- customerId: string;
- status: 'online' | 'offline';
- lastSeen?: string;
+  id: string;
+  content: string;
+  type?: string;
+  sender?: string;
+  customerId?: string;
+  agentId?: string;
+  timestamp?: string;
+  [key: string]: unknown;  // 允许其他字段
 }
 
 export interface AgentStatusData {
- agentId: string;
- status: 'online' | 'away' | 'busy';
+  agentId: string;
+  status: 'online' | 'away' | 'busy' | string;
 }
 
 export interface PingPongData {
- timestamp: number;
+  timestamp: number;
 }
 
 export interface ErrorData {
- code: string;
- message: string;
+  code: string;
+  message: string;
 }
+
 // WebSocket连接状态
 export enum WebSocketStatus {
   CONNECTING = 0,
@@ -142,6 +221,49 @@ export enum ChatPanelType {
   NONE = 'none',
   USER_INFO = 'user_info',
   QUICK_REPLY = 'quick_reply'
+}
+
+// 黑名单用户
+export interface BlacklistedUser {
+  id: string;
+  nickname: string;
+  avatar?: string;
+  reason: string;
+  createdAt: string;
+  ip: string;
+  device: string;
+  isOnline: boolean;
+  lastSeen: string;
+  firstVisit: string;
+  blacklistedAt?: string;
+}
+
+// 快捷回复
+export interface QuickReply {
+  id: string;
+  title: string;
+  content: string;
+}
+
+// 客服设置
+export interface AgentSettings {
+  id: string;
+  key: string;
+  expiryTime: string;
+  nickname: string;
+  avatar: string;
+  status: 'online' | 'away' | 'busy';
+  soundEnabled?: boolean;
+  welcomeMessages?: string[];
+}
+
+// 用户设置
+export interface UserSettings {
+  id: string;
+  nickname: string;
+  avatar: string;
+  soundEnabled?: boolean;
+  theme?: 'light' | 'dark';
 }
 
 // 统计数据
@@ -161,46 +283,51 @@ export interface UploadResult {
   error?: string;
 }
 
-// 短链验证结果
-export interface LinkVerificationResult {
+// 链接相关接口
+export interface LinkInfo {
   valid: boolean;
-  agentId?: string;
-  linkId?: string;
-  expiresAt?: string;
   message?: string;
+  link?: {
+    id: string;
+    code: string;
+    expiresAt: string;
+  };
+  agent?: AgentData;
+  agentId?: string;
+}
+
+// 短链验证结果
+export interface LinkVerificationResult extends LinkInfo {
+  linkId?: string;
 }
 
 // 卡密验证结果
 export interface KeyVerificationResult {
- valid: boolean;
- isAdmin?: boolean;
- agentId?: string;
- agentData?: {
-   id: string;
-   nickname?: string;
-   avatar?: string;
-   status?: string; // 注意这里是string，而不是限制为'online'|'away'|'busy'
- };
- message?: string;
- expiresAt?: string; //  verifyLink 函数返回的 expiresAt 仍然是 string 类型 (来自数据库)
+  valid: boolean;
+  isAdmin?: boolean;
+  agentId?: string;
+  agentData?: AgentData;
+  message?: string;
+  expiresAt?: string;
+  linkId?: string;
 }
 
-export interface tokenData {
- agentId: string;
- linkId: string;
- expiresAt: number; // 注意这里是number类型
- createdAt: number; // 注意这里是number类型
- [key: string]: unknown;
+export interface TokenData {
+  agentId: string;
+  linkId: string;
+  expiresAt: number;
+  createdAt: number;
+  [key: string]: unknown;
 }
 
-// 定义 AgentLink 接口来明确 getAgentLinks 函数的返回类型
+// 定义 AgentLink 接口
 export interface AgentLink {
- id: string;
- linkId: string;
- createdAt: string;
- expiresAt: string;
- isActive: boolean;
- shareUrl: string;
+  id: string;
+  linkId: string;
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
+  shareUrl: string;
 }
 
 export interface KeyData {
@@ -214,22 +341,7 @@ export interface KeyData {
   remainingDays: number;
 }
 
-export interface AgentData {
-  id: string;
-  nickname?: string;
-  avatar?: string;
-  status?: string;
-  // 移除 email 字段
-}
-
-
-export type UserType = 'user' | 'admin';
-
-// 在现有的 types/index.ts 文件中添加以下类型定义
-
-/**
- * 密钥作用域枚举
- */
+// 密钥相关
 export enum KeyScope {
   CHAT = 'chat',
   ADMIN = 'admin',
@@ -238,9 +350,6 @@ export enum KeyScope {
   SYSTEM = 'system'
 }
 
-/**
- * 密钥用途枚举
- */
 export enum KeyPurpose {
   AUTH = 'auth',
   SHARE = 'share',
@@ -249,13 +358,21 @@ export enum KeyPurpose {
   SESSION = 'session'
 }
 
-/**
- * 密钥信息接口
- */
 export interface KeyInfo {
   key: string;
   scope: KeyScope;
   purpose: KeyPurpose;
   expires: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
+}
+
+// 临时用户创建结果
+export interface TempUserCreationResult {
+  token: string;
+  user: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
+  agent?: AgentData;
 }

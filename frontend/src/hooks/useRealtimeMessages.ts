@@ -13,7 +13,7 @@ export const useRealtimeMessages = (customerId: string) => {
         const { data, error } = await supabase
           .from('messages')
           .select('*')
-          .or(`recipientId.eq.${customerId},sender.eq.${customerId}`)
+          .or(`recipient_id.eq.${customerId},sender_id.eq.${customerId}`)
           .order('timestamp', { ascending: true });
           
         if (error) throw error;
@@ -35,7 +35,7 @@ export const useRealtimeMessages = (customerId: string) => {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `recipientId=eq.${customerId}`,
+        filter: `recipient_id=eq.${customerId}`,
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message]);
       })

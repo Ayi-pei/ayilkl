@@ -69,6 +69,9 @@ interface ChatState {
   
   // 统计相关
   fetchStats: () => Promise<void>;
+  
+  // 设置用户类型
+  setUserType: (type: 'agent' | 'user' | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -91,6 +94,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     onlineAgents: 0,
     totalKeys: 0
   },
+  
+  // 设置用户类型
+  setUserType: (type: 'agent' | 'user' | null) => set({ userType: type }),
   
   // 初始化聊天
   initializeChat: async (linkId: string) => {

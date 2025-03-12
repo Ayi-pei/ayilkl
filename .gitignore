@@ -20,27 +20,22 @@ winget_install/
 *.msixbundle
 
 # 环境变量文件
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
+
+# VS Code 设置（如果包含敏感信息）
+.vscode/settings.json
+
+# 其他不需要提交的文件
+node_modules/
+dist/
+build/
+.DS_Store
 
 # 编辑器目录和文件
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
 
 # 构建输出
-/build
-/out
+
 
 # 测试覆盖率报告
 /coverage
@@ -59,10 +54,7 @@ temp/
 tmp/
 
 # 系统文件
-Thumbs.db
-desktop.ini
+
 
 # 敏感信息
-*.pem
-*.key
-*.cert
+

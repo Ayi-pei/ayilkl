@@ -24,12 +24,12 @@ router.post('/:userId/block', userController.blockUser);
 router.post('/:userId/unblock', userController.unblockUser);
 
 // 获取客服的分享链接
-router.get('/share-links/my', userController.getMyShareLinks);
+router.get('/share-links/my', userController.getShareLinks);
 
 // 创建新的分享链接
 router.post('/share-links/create', userController.createShareLink);
 
 // 获取分享链接的访问统计
-router.get('/share-links/:linkId/stats', userController.getShareLinkStats);
+router.get('/share-links/:linkId/stats', userController.getShareLinkUsers);
 
 module.exports = router;

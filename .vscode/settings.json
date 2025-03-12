@@ -5,7 +5,7 @@
   "sql.linter.enable": true,
   "[sql]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "ckolkman.vscode-postgres"
+    "editor.defaultFormatter": "milkman.vscode-postgres"
   },
   "files.associations": {
     "*.sql": "postgres"
@@ -17,7 +17,7 @@
       "port": 5432,
       "user": "postgres",
       "database": "postgres",
-      "password": "Ayi198701@gmail"
+      "password": "${env:SUPABASE_DB_PASSWORD}"
     }
   ],
   "json.schemaDownload.enable": false

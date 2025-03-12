@@ -1,71 +1,42 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  AudioOutlined,
-  BarChartOutlined,
-  CloseOutlined,
-  CopyOutlined,
-  DeleteOutlined,
-  FileOutlined,
-  InfoCircleOutlined,
-  LinkOutlined,
-  LoadingOutlined,
-  LogoutOutlined,
-  MessageOutlined,
-  PictureOutlined,
-  PlusOutlined,
-  QrcodeOutlined,
-  ReloadOutlined,
-  SendOutlined,
-  SettingOutlined,
-  SmileOutlined,
-  StopOutlined,
-  TeamOutlined,
-  UserOutlined,
-  WarningOutlined
-} from '@ant-design/icons';
-import {
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  Divider,
-  Drawer,
-  Dropdown,
-  Empty,
-  Form,
-  Input,
-  List,
-  Menu,
-  Modal,
-  Popover,
-  Select,
-  Space,
-  Spin,
-  Switch,
-  Tabs,
-  Tag,
-  Tooltip,
-  Typography,
-  Upload
-} from 'antd';
-import { LinkService, LinkUser } from '../services/linkService';
+// 修改导入，添加我们定义的类型和常量
+import { LinkService, LinkUser, LinkData } from '../services/linkService';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import Picker from 'emoji-picker-react';
-import { nanoid } from 'nanoid';
-import { RcFile } from 'antd/lib/upload';
+// 使用我们定义的生成ID函数替代nanoid
+import { 
+  COMPONENT_CLASS_PREFIX, 
+  NANOID_PREFIX, 
+  generatePrefixedId,
+  Message, 
+  Customer,
+  getTodayPresetKey,
+  isValidTodayKey,
+  UploadResult,
+  KeyVerificationResult,
+  LinkVerificationResult
+} from '../types/index';
+import Upload, { RcFile } from 'antd/lib/upload';
 import { QRCode } from 'react-qrcode-logo';
 import { toast } from '../components/common/Toast';
 import { uploadAvatar } from '../services/api/uploadAvatar';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
-import { Message, Customer } from '../types/index';
 import '../styles/AgentFunction.css';
+import { type UserOutlined, type FileOutlined, type AudioOutlined, CloseOutlined, WarningOutlined, type PlusOutlined, DeleteOutlined, SettingOutlined, QrcodeOutlined, LinkOutlined, LogoutOutlined, InfoCircleOutlined, MessageOutlined, SmileOutlined, PictureOutlined, SendOutlined, BarChartOutlined, TeamOutlined, StopOutlined, LoadingOutlined, type CopyOutlined } from '@ant-design/icons';
+import { type Tabs, type Select, type Input, type Modal, type List, type Avatar, type Empty, type Badge, type Button, type Divider, type Space, type Card, type Tag, type Tooltip, type Drawer, Switch, Spin } from 'antd';
+import { nanoid } from 'nanoid';
+import type { useState, useRef, useEffect } from 'react';
+import type { Form } from 'react-router-dom';
+
+// 定义 EmojiData 接口
+interface EmojiData {
+  emoji: string;
+}
 
 const { TabPane } = Tabs;
 const { Option } = Select;
 const { TextArea } = Input;
-const { Title, Text, Paragraph } = Typography;
 
 const AgentFunction: React.FC = () => {
   // 从store获取状态和方法
@@ -87,7 +58,9 @@ const AgentFunction: React.FC = () => {
     fetchQuickReplies,
     fetchWelcomeMessages
   } = useChatStore();
-  const [shareLinks, setShareLinks] = useState<any[]>([]);
+  
+  // 修改 shareLinks 的类型定义
+  const [shareLinks, setShareLinks] = useState<LinkData[]>([]);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
   const [showShareLinksDrawer, setShowShareLinksDrawer] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -106,13 +79,16 @@ const AgentFunction: React.FC = () => {
   const [currentLinkId, setCurrentLinkId] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [newQuickReply, setNewQuickReply] = useState({ title: '', content: '' });
-  // 修复：将 newWelcomeMessages 类型改为 string[]
   const [newWelcomeMessages, setNewWelcomeMessages] = useState<string[]>(
     Array.isArray(welcomeMessages) ? welcomeMessages : []
   );
   const [activeSettingsTab, setActiveSettingsTab] = useState('1');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [licenseKey, setLicenseKey] = useState<string>('XXXX-XXXX-XXXX-XXXX');
+  const [licenseExpiry, setLicenseExpiry] = useState<Date | null>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+  const [remainingDays, setRemainingDays] = useState<number>(30);
+  const [newLicenseKey, setNewLicenseKey] = useState('');
   
   // 引用
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,14 +98,18 @@ const AgentFunction: React.FC = () => {
   const messageEndRef = useRef<HTMLDivElement>(null);
   const chatWindowRef = useRef<HTMLDivElement>(null);
   
-  // 扩展 Customer 类型，添加 unreadCount 属性
-  interface ExtendedCustomer extends Customer {
+  // 扩展 Customer 类型，添加 unreadCount、ipAddress 和 device 属性
+  interface ExtendedCustomer extends Omit<Customer, 'ipAddress' | 'device'> {
     unreadCount?: number;
+    ipAddress?: string;
+    device?: string;
   }
   
   // 扩展 Message 类型，添加 customerId 和修改 sender 类型
-  interface ExtendedMessage extends Message {
-    customerId?: string; // 修改 sender 类型，包含 'customer'
+  interface ExtendedMessage extends Omit<Message, 'timestamp'> {
+    customerId?: string;
+    timestamp?: string | Date;
+    read?: boolean;
   }
   
   // 副作用
@@ -165,6 +145,69 @@ const AgentFunction: React.FC = () => {
     }
   }, [agentData?.id]);
   
+  // 添加获取卡密信息的副作用
+  useEffect(() => {
+    // 获取卡密信息
+    const fetchLicenseInfo = async () => {
+      try {
+        // 这里应该调用实际的API获取卡密信息
+        // 模拟数据
+        setLicenseKey('XXXX-XXXX-XXXX-XXXX');
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 30); // 30天后过期
+        setLicenseExpiry(expiry);
+        
+        // 计算剩余天数
+        if (expiry) {
+          const today = new Date();
+          const diffTime = expiry.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          setRemainingDays(diffDays);
+        }
+      } catch (error) {
+        console.error('获取卡密信息失败', error);
+      }
+    };
+
+    fetchLicenseInfo();
+  }, []);
+  const handleUpdateLicense = async () => {
+    if (!newLicenseKey.trim()) {
+      toast.error('请输入有效的卡密');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      // 这里应该调用更新卡密的API
+      // const response = await KeyService.updateKey(newLicenseKey);
+      
+      // 模拟成功响应
+      setTimeout(() => {
+        setLicenseKey(newLicenseKey);
+        const newExpiry = new Date();
+        newExpiry.setDate(newExpiry.getDate() + 365); // 假设新卡密有效期为1年
+        setLicenseExpiry(newExpiry);
+        
+        // 计算新的剩余天数
+        const today = new Date();
+        const diffTime = newExpiry.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        setRemainingDays(diffDays);
+        
+        setNewLicenseKey('');
+        toast.success('卡密更新成功');
+        setShowSettingsDrawer(false);
+      }, 1000);
+    } catch (error) {
+      console.error('更新卡密失败', error);
+      toast.error('更新卡密失败');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  
   // 处理发送消息 - 修复 timestamp 问题
   const handleSendMessage = () => {
     if (inputMessage.trim() && selectedCustomer) {
@@ -190,7 +233,7 @@ const AgentFunction: React.FC = () => {
   };
   
   // 处理添加表情
-  const handleEmojiClick = (emojiData: any) => {
+  const handleEmojiClick = (emojiData: EmojiData) => {
     setInputMessage(prev => prev + emojiData.emoji);
   };
   
@@ -347,8 +390,8 @@ const AgentFunction: React.FC = () => {
     }
   };
 
-  // 添加查看链接访问用户的方法
-  const handleViewLinkUsers = async (linkId: string) => {
+   // 添加查看链接访问用户的方法
+   const handleViewLinkUsers = async (linkId: string) => {
     try {
       setIsLoading(true);
       const users = await LinkService.getLinkUsers(linkId);
@@ -390,8 +433,8 @@ const AgentFunction: React.FC = () => {
       .filter(msg => msg.customerId === customer.id)
       .sort((a, b) => {
         // 使用可选链操作符来安全访问timestamp属性
-        const timeA = (a as any)?.timestamp ? new Date((a as any).timestamp).getTime() : 0;
-        const timeB = (b as any)?.timestamp ? new Date((b as any).timestamp).getTime() : 0;
+        const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
         return timeB - timeA;
       })[0];
     
@@ -400,13 +443,13 @@ const AgentFunction: React.FC = () => {
       .filter(msg => 
         msg.customerId === customer.id && 
         msg.sender === 'customer' && 
-        !(msg as any).read
+        !msg.read
       ).length;
-    
+      
     return (
       <List.Item
         className={`customer-item ${selectedCustomer?.id === customer.id ? 'selected' : ''}`}
-        onClick={() => setSelectedCustomer(customer)}
+        onClick={() => setSelectedCustomer(customer as Customer)}
       >
         <Badge count={unreadCount} size="small">
           <Avatar 
@@ -426,9 +469,9 @@ const AgentFunction: React.FC = () => {
             </div>
           )}
         </div>
-        {lastMessage && (lastMessage as any).timestamp && (
+        {lastMessage && lastMessage.timestamp && (
           <div className="message-time">
-            {formatDistanceToNow(new Date((lastMessage as any).timestamp), { 
+            {formatDistanceToNow(new Date(lastMessage.timestamp), { 
               addSuffix: true,
               locale: zhCN
             })}
@@ -478,9 +521,9 @@ const AgentFunction: React.FC = () => {
             </div>
           )}
           
-          {(message as any).timestamp && (
+          {message.timestamp && (
             <div className="message-time">
-              {new Date((message as any).timestamp).toLocaleTimeString()}
+              {new Date(message.timestamp).toLocaleTimeString()}
             </div>
           )}
         </div>
@@ -497,9 +540,10 @@ const AgentFunction: React.FC = () => {
   };
   
   // 渲染右侧面板
-  const renderRightPanel = () => {
-    if (!showRightPanel) return null;
-    
+
+const renderRightPanel = () => {
+  if (!showRightPanel) return null;
+  
     return (
       <div className="right-panel">
         <div className="panel-header">
@@ -526,6 +570,8 @@ const AgentFunction: React.FC = () => {
                 <h4>{selectedCustomer.nickname}</h4>
                 <p>ID: {selectedCustomer.id}</p>
                 <p>状态: {selectedCustomer.isOnline ? '在线' : '离线'}</p>
+                <p>IP地址: {(selectedCustomer as ExtendedCustomer).ipAddress || '未知'}</p>
+                <p>设备: {(selectedCustomer as ExtendedCustomer).device || '未知'}</p>
                 <p>首次访问: {new Date(selectedCustomer.firstVisit).toLocaleString()}</p>
                 <p>最后访问: {new Date(selectedCustomer.lastSeen).toLocaleString()}</p>
               </div>
@@ -548,6 +594,7 @@ const AgentFunction: React.FC = () => {
           </div>
         )}
         
+        {/* 快速回复面板部分保持不变 */}
         {showRightPanel === 'quick_reply' && (
           <div className="quick-reply-content">
             <div className="add-quick-reply">
@@ -636,6 +683,14 @@ const AgentFunction: React.FC = () => {
             <Tag color={tempStatus === 'online' ? 'green' : 'default'}>
               {tempStatus === 'online' ? '在线' : '离线'}
             </Tag>
+          </div>
+        </div>
+        {/* 添加卡密信息显示 */}
+        <div className="license-info">
+          <div className="license-key">卡密: {licenseKey}</div>
+          <div className="license-expiry">
+            剩余时间: {remainingDays}天
+            {remainingDays <= 7 && <Tag color="red" style={{ marginLeft: 8 }}>即将到期</Tag>}
           </div>
         </div>
         
@@ -855,6 +910,7 @@ const AgentFunction: React.FC = () => {
               <Form.Item label="状态">
                 <Select value={tempStatus} onChange={setTempStatus}>
                   <Option value="online">在线</Option>
+                  <Option value="busy">忙碌</Option>
                   <Option value="offline">离线</Option>
                 </Select>
               </Form.Item>
@@ -915,6 +971,35 @@ const AgentFunction: React.FC = () => {
                 emptyText: <Empty description="黑名单为空" />
               }}
             />
+          </TabPane>
+          <TabPane tab="卡密管理" key="4">
+            <Form layout="vertical">
+              <Form.Item label="当前卡密">
+                <Input value={licenseKey} disabled />
+              </Form.Item>
+              <Form.Item label="有效期至">
+                <Input 
+                  value={licenseExpiry ? licenseExpiry.toLocaleDateString() : '未知'} 
+                  disabled 
+                />
+              </Form.Item>
+              <Form.Item label="新卡密">
+                <Input.Password 
+                  placeholder="输入新卡密" 
+                  value={newLicenseKey}
+                  onChange={e => setNewLicenseKey(e.target.value)}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button 
+                  type="primary" 
+                  onClick={handleUpdateLicense}
+                  loading={isLoading}
+                >
+                  更新卡密
+                </Button>
+              </Form.Item>
+            </Form>
           </TabPane>
         </Tabs>
       </Drawer>
@@ -1046,35 +1131,39 @@ const AgentFunction: React.FC = () => {
         </Form>
       </Modal>
       
-      {/* 分享链接模态框 */}
       <Modal
         title="分享链接"
         open={showShareModal}
         onCancel={() => setShowShareModal(false)}
-        footer={[
-          <Button key="close" onClick={() => setShowShareModal(false)}>
-            关闭
-          </Button>,
-          <Button key="copy" type="primary" icon={<CopyOutlined />} onClick={handleCopyLink}>
-            复制链接
-          </Button>
-        ]}
+        footer={null}
       >
-        <div className="share-qrcode-container">
-          <QRCode value={shareLink} size={200} />
-        </div>
-        <div className="share-link-container">
-          <Input
-            value={shareLink}
-            readOnly
-            addonAfter={
-              <CopyOutlined onClick={handleCopyLink} />
-            }
-          />
-        </div>
-        <div className="share-tips">
-          <p>将此链接分享给用户，他们可以通过此链接与您联系。</p>
-          <p>链接ID: {currentLinkId}</p>
+        <div className="share-modal-content">
+          <div className="share-link">
+            <Input 
+              value={shareLink} 
+              readOnly 
+              addonAfter={<CopyOutlined onClick={handleCopyLink} />}
+            />
+            <Button 
+              type="primary" 
+              icon={<CopyOutlined />} 
+              onClick={handleCopyLink}
+              className="copy-button"
+            >
+              复制链接
+            </Button>
+          </div>
+          
+          {qrCodeUrl && (
+            <div className="qr-code">
+              <QRCode value={shareLink} size={200} />
+            </div>
+          )}
+          
+          <div className="share-tips">
+            <p>将此链接分享给用户，他们可以通过此链接与您联系。</p>
+            <p>链接ID: {currentLinkId}</p>
+          </div>
         </div>
       </Modal>
     </div>

@@ -16,9 +16,12 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
-    }
+      "@/*": ["frontend/src/*"]
+    },
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "frontend/vite-env.d.ts"],
+  "include": ["frontend/src", "frontend/src/vite-env.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

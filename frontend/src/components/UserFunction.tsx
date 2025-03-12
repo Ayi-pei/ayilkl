@@ -30,12 +30,41 @@ import { useChatStore } from '../stores/chatStore';
 import { uploadAvatar } from '../services/api/uploadAvatar';
 import { toast } from './common/Toast';
 import { LinkService } from '../services/linkService';
+import { Message } from '../types/index';
 
 // 在文件顶部导入样式文件
 import '../styles/UserFunction.css';
 
 const { TextArea } = Input;
-const { Title, Text, Paragraph } = Typography;
+// 移除未使用的 Text 导入
+const { Title, Paragraph } = Typography;
+
+// 定义 EmojiData 接口
+interface EmojiData {
+  emoji: string;
+}
+
+// 定义 LinkInfo 接口
+interface LinkInfo {
+  valid: boolean;
+  message?: string;
+  link?: {
+    id: string;
+    code: string;
+    expiresAt: string;
+  };
+  agent?: {
+    id: string;
+    nickname: string;
+    avatar?: string;
+  };
+}
+
+// 扩展 Message 接口以支持系统消息
+interface ExtendedMessage extends Omit<Message, 'type' | 'sender'> {
+  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system';
+  sender: 'user' | 'agent' | 'customer' | 'system';
+}
 
 const UserFunction: React.FC = () => {
   const { 
@@ -43,7 +72,8 @@ const UserFunction: React.FC = () => {
     updateUserSettings,
     messages,
     sendMessage,
-    currentAgent
+    currentAgent,
+    addMessage
   } = useChatStore();
   
  // 本地状态
@@ -53,7 +83,7 @@ const UserFunction: React.FC = () => {
  const [showAgentInfoDrawer, setShowAgentInfoDrawer] = useState(false);
  const [tempNickname, setTempNickname] = useState(userSettings?.nickname || '');
  const [isLoading, setIsLoading] = useState(false);
- const [linkInfo, setLinkInfo] = useState<any>(null);
+ const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
  const [hasShownLinkInfo, setHasShownLinkInfo] = useState(false);
  
  const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +111,7 @@ const UserFunction: React.FC = () => {
           // 如果是通过分享链接访问，显示欢迎消息
           if (info && info.agent && messages.length === 0) {
             // 添加一条系统消息，表明这是通过分享链接访问的
-            const systemMessage = {
+            const systemMessage: ExtendedMessage = {
               id: nanoid(),
               content: `您正在通过分享链接与客服 ${info.agent.nickname} 聊天`,
               type: 'system',
@@ -90,8 +120,7 @@ const UserFunction: React.FC = () => {
             };
             
             // 将消息添加到聊天记录中
-            // 注意：这里需要修改 useChatStore 以支持系统消息
-            // 或者使用现有的 addMessage 方法
+            addMessage(systemMessage as Message);
           }
         }
       } catch (error) {
@@ -101,7 +130,8 @@ const UserFunction: React.FC = () => {
     };
     
     fetchLinkInfo();
-  }, [messages.length]);
+  }, [messages.length, addMessage]);
+    
   // 处理消息发送
   const handleSendMessage = () => {
     if (inputMessage.trim()) {
@@ -125,7 +155,7 @@ const UserFunction: React.FC = () => {
   };
   
   // 点击表情
-  const handleEmojiClick = (emojiData: any) => {
+  const handleEmojiClick = (emojiData: EmojiData) => {
     setInputMessage(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
   };
@@ -245,7 +275,7 @@ const UserFunction: React.FC = () => {
   };
   
   // 渲染消息气泡
-  const renderMessageContent = (message: any) => {
+  const renderMessageContent = (message: Message) => {
     switch (message.type) {
       case 'text':
         return <div className="message-text">{message.content}</div>;
@@ -282,7 +312,7 @@ const UserFunction: React.FC = () => {
   return (
     <div className="user-chat-container">
       {/* 添加分享链接提示 */}
-      {linkInfo && !hasShownLinkInfo && (
+      {linkInfo && linkInfo.agent && !hasShownLinkInfo && (
         <Alert
           message="通过分享链接访问"
           description={`您正在与客服 ${linkInfo.agent.nickname} 通过专属链接聊天`}
@@ -529,7 +559,7 @@ const UserFunction: React.FC = () => {
           <div className="agent-info-name">
             {currentAgent?.nickname || '客服'}
           </div>
-          {linkInfo && (
+          {linkInfo && linkInfo.link && (
             <div className="link-info">
               <Tag color="blue">通过分享链接访问</Tag>
               <div className="link-expiry">

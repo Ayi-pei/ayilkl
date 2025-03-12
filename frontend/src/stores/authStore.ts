@@ -5,10 +5,11 @@ import { KeyManager } from '../services/keyManager';
 import { KeyScope, KeyPurpose } from '../types/index';
 
 // 定义认证状态接口
+// 更新 AuthState 接口
 interface AuthState {
   isAuthenticated: boolean;
-  userType: 'admin' | 'agent' | 'user' | null;
-  agentData: any | null;
+  userType: UserType;  // 使用统一的 UserType
+  agentData: AgentData | null;  // 使用 AgentData 接口
   error: string | null;
   isLoading: boolean;
   
@@ -23,8 +24,8 @@ interface AuthState {
   verifySession: () => Promise<boolean>;
   clearError: () => void;
   getCurrentAgentId: () => string | null;
-  // 添加这个方法
-  updateAgentData: (data: Partial<any>) => void;
+  getUserId: () => string | null;
+  updateAgentData: (data: Partial<AgentData>) => void;  // 使用 AgentData 接口
 }
 
 // 创建认证状态存储
@@ -170,8 +171,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return null;
   },
   
+  // 获取当前用户ID
+  getUserId: () => {
+    const { userType, agentData } = get();
+    
+    if (userType === 'user') {
+      return localStorage.getItem('user_id') || agentData?.id;
+    }
+    
+    return null;
+  },
+  
   // 更新客服数据
-  updateAgentData: (data: Partial<any>) => {
+  updateAgentData: (data: Partial<AgentData>) => {
     set(state => ({
       agentData: state.agentData ? { ...state.agentData, ...data } : data
     }));

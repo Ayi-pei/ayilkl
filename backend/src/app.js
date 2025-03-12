@@ -15,9 +15,19 @@ const { createTempUser } = require('./middlewares/user');
 const app = express();
 
 // 中间件配置
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:5173'], 
+  credentials: true, 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 导入 Swagger 文档
+const swagger = require('./utils/swagger');
+// 添加 Swagger 文档
+app.use('/api-docs', swagger.serve, swagger.setup);
 
 // 用户通过短链接访问聊天页面
 app.get('/chat/:code', authenticateShareLink, createTempUser, (req, res) => {
@@ -37,12 +47,14 @@ app.get('/chat/:code', authenticateShareLink, createTempUser, (req, res) => {
 // 路由导入
 const apiRoutes = require('./routes/apiRoutes');
 const keysRoutes = require('./routes/keys');
+const adminApi = require('../api/adminApi'); // 添加管理员API路由导入
 
 // 应用路由
 app.use('/api', apiRoutes);
 app.use('/api/keys', keysRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminApi); // 添加管理员API路由
 
 // 健康检查路由
 app.get('/health', (req, res) => {
