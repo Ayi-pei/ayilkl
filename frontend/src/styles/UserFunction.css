@@ -1,0 +1,248 @@
+/* 用户功能组件样式 */
+.user-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.user-chat-header {
+  padding: 12px 20px;
+  background-color: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+}
+
+.user-profile-avatar {
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.agent-name {
+  font-weight: 500;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.agent-hint {
+  font-size: 12px;
+  color: #999;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 聊天窗口样式 */
+.chat-window {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background-color: #f5f5f5;
+}
+
+.message-item {
+  display: flex;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+
+.message-item-user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  margin: 0 8px;
+}
+
+.message-content {
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-sender {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.message-sender-user {
+  text-align: right;
+}
+
+.message-bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  word-break: break-word;
+}
+
+.message-bubble-user {
+  background-color: #1890ff;
+  color: white;
+}
+
+.message-text {
+  white-space: pre-wrap;
+}
+
+.message-image img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+}
+
+.message-audio audio {
+  width: 100%;
+}
+
+.file-name {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.message-bubble-user .file-name {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.message-time {
+  font-size: 11px;
+  color: #bfbfbf;
+  margin-top: 4px;
+}
+
+.message-time-user {
+  text-align: right;
+}
+
+.empty-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* 输入区域样式 */
+.input-area {
+  background-color: #fff;
+  border-top: 1px solid #e8e8e8;
+  padding: 10px 16px;
+}
+
+.input-toolbar {
+  margin-bottom: 8px;
+}
+
+.emoji-picker-wrapper {
+  position: absolute;
+  bottom: 180px;
+  left: 16px;
+  z-index: 100;
+}
+
+.input-container {
+  display: flex;
+  align-items: flex-start;
+}
+
+.input-textarea {
+  flex: 1;
+  resize: none;
+  border-radius: 4px;
+}
+
+.send-button {
+  margin-left: 8px;
+}
+
+/* 设置抽屉样式 */
+.settings-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.avatar-upload-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background-color: rgba(0,0,0,0.65);
+  color: #fff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-hint {
+  margin-top: 8px;
+  color: #999;
+  font-size: 13px;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-label {
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.settings-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+.input-icon {
+  color: #999;
+}
+
+/* 客服信息抽屉样式 */
+.agent-info-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.agent-info-name {
+  margin-top: 12px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.tips-section {
+  margin-top: 24px;
+  background-color: #f9f9f9;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}

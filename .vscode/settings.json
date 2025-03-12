@@ -1,0 +1,24 @@
+{
+  "sql.defaultDialect": "postgresql",
+  "sql.format.keywordCase": "upper",
+  "sql.format.indentStyle": "standard",
+  "sql.linter.enable": true,
+  "[sql]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ckolkman.vscode-postgres"
+  },
+  "files.associations": {
+    "*.sql": "postgres"
+  },
+  "postgres.connections": [
+    {
+      "name": "Supabase",
+      "host": "db.zmjyodxdvctygjphghxy.supabase.co",
+      "port": 5432,
+      "user": "postgres",
+      "database": "postgres",
+      "password": "Ayi198701@gmail"
+    }
+  ],
+  "json.schemaDownload.enable": false
+}

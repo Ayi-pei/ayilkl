@@ -1,0 +1,86 @@
+/* src/styles/chatPage.css */
+.chat-loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
+    background-color: #f0f2f5;
+  }
+  
+  .loading-text {
+    margin-top: 16px;
+  }
+  
+  .chat-page-container {
+    height: 100vh;
+    width: 100%;
+  }
+
+  /* 分享链接相关样式 */
+  .share-link-toast {
+    border-left: 5px solid #1890ff;
+  }
+  
+  .share-link-alert {
+    margin-bottom: 16px;
+  }
+  
+  .link-info {
+    margin: 16px 0;
+    text-align: center;
+  }
+
+  .link-expiry {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #999;
+  }
+
+  .share-link-info {
+    margin-top: 24px;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 16px;
+  }
+
+  .privacy-info {
+    margin-top: 24px;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 16px;
+  }
+
+  .share-link-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .share-link-qrcode {
+    text-align: center;
+  }
+
+  .share-link-info {
+    width: 100%;
+  }
+
+  .share-link-text {
+    margin-bottom: 8px;
+  }
+
+  .share-link-hint {
+    color: #999;
+    font-size: 12px;
+  }
+
+  .link-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .link-description {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }

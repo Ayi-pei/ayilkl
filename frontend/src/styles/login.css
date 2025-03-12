@@ -1,0 +1,46 @@
+/* src/styles/login.css */
+.login-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  }
+  
+  .login-card {
+    width: 360px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+  
+  .login-title {
+    text-align: center;
+    margin-bottom: 36px;
+    font-size: 28px;
+    color: #1890ff;
+    font-weight: 600;
+  }
+  
+  .login-footer {
+    margin-top: 24px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+  }
+  
+  /* 输入框样式增强 */
+  .ant-input-affix-wrapper-lg {
+    padding: 12px;
+    border-radius: 6px;
+  }
+  
+  .ant-input-lg {
+    font-size: 16px;
+  }
+  
+  /* 按钮样式增强 */
+  .ant-btn-lg {
+    height: 48px;
+    font-size: 16px;
+    border-radius: 6px;
+  }
