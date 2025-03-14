@@ -4,8 +4,8 @@
   "sql.format.indentStyle": "standard",
   "sql.linter.enable": true,
   "[sql]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "milkman.vscode-postgres"
+    "editor.defaultFormatter": "milkman.vscode-postgres",
+    "editor.formatOnSave": true
   },
   "files.associations": {
     "*.sql": "postgres"
