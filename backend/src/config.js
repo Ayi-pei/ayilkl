@@ -1,19 +1,25 @@
-// src/config.js
-require('dotenv').config();
+// ... 现有代码 ...
+
+// 数据库配置
+// 构建 PostgreSQL 连接字符串
+const buildPostgresConnectionString = () => {
+  const password = process.env.POSTGRES_PASSWORD;
+  if (!password) {
+    console.warn('警告: 未设置 POSTGRES_PASSWORD 环境变量');
+    return null;
+  }
+  return `postgresql://postgres:${password}@db.zmjyodxdvctygjphghxy.supabase.co:5432/postgres`;
+};
 
 module.exports = {
-  port: process.env.PORT || 3000,
+  // ... 其他配置 ...
   
-  // Supabase配置
-  supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_SERVICE_KEY,
+  // Supabase 配置
+  supabaseUrl: process.env.SUPABASE_URL || 'https://zmjyodxdvctygjphghxy.supabase.co',
+  supabaseKey: process.env.SUPABASE_KEY || 'your-anon-key',
   
-  // PostgreSQL连接
-  postgresConnection: process.env.POSTGRES_CONNECTION_STRING,
+  // PostgreSQL 直接连接配置
+  postgresConnection: buildPostgresConnectionString(),
   
-  // JWT配置
-  jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
-  jwtExpiresIn: '7d',
-  
-  // 其他配置...
+  // ... 其他配置 ...
 };
