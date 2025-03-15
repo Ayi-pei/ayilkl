@@ -9,10 +9,18 @@ import {
   WebSocketMessage, 
   Message, 
   CustomerStatusData, 
-  Customer 
+  Customer,
+  WebSocketStatus
 } from '../types/index';
 
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+// 使用统一的WebSocketStatus枚举
+type ConnectionStatus = WebSocketStatus;
+
+// 定义函数类型，解决循环引用问题
+type HandleReconnectFn = () => void;
+type HandleWebSocketMessageFn = (message: WebSocketMessage) => void;
+type SendAuthMessageFn = () => void;
+type ConnectWebSocketFn = () => void;
 
 export const useWebSocket = () => {
   const wsUrl = import.meta.env.VITE_WS_URL;
@@ -22,7 +30,7 @@ export const useWebSocket = () => {
   const maxReconnectAttempts = 5;
   const baseReconnectDelay = 1000; // 开始1秒，然后指数增长
   
-  const [connectStatus, setConnectStatus] = useState<ConnectionStatus>('disconnected');
+  const [connectStatus, setConnectStatus] = useState<ConnectionStatus>(WebSocketStatus.CLOSED);
   const { isAuthenticated, userType, getCurrentAgentId, getUserId } = useAuthStore();
   const { 
     addMessage, 
@@ -30,8 +38,14 @@ export const useWebSocket = () => {
     setCustomers
   } = useChatStore();
   
+  // 声明函数引用，解决循环依赖问题
+  const sendAuthMessageRef = useRef<SendAuthMessageFn | null>(null);
+  const handleWebSocketMessageRef = useRef<HandleWebSocketMessageFn | null>(null);
+  const handleReconnectRef = useRef<HandleReconnectFn | null>(null);
+  const connectWebSocketRef = useRef<ConnectWebSocketFn | null>(null);
+  
   // 连接WebSocket
-  const connectWebSocket = useCallback(() => {
+  const connectWebSocket: ConnectWebSocketFn = useCallback(() => {
     if (!wsUrl) {
       console.error('WebSocket URL未配置');
       toast.error('通信服务配置错误，请联系管理员');
@@ -49,7 +63,7 @@ export const useWebSocket = () => {
     }
     
     try {
-      setConnectStatus('connecting');
+      setConnectStatus(WebSocketStatus.CONNECTING);
       
       // 创建WebSocket连接
       socket.current = new WebSocket(wsUrl);
@@ -57,18 +71,22 @@ export const useWebSocket = () => {
       // 连接打开时
       socket.current.onopen = () => {
         console.log('WebSocket连接已建立');
-        setConnectStatus('connected');
+        setConnectStatus(WebSocketStatus.OPEN);
         reconnectAttempts.current = 0;
         
         // 发送身份验证消息
-        sendAuthMessage();
+        if (sendAuthMessageRef.current) {
+          sendAuthMessageRef.current();
+        }
       };
       
       // 接收消息
       socket.current.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as WebSocketMessage;
-          handleWebSocketMessage(message);
+          if (handleWebSocketMessageRef.current) {
+            handleWebSocketMessageRef.current(message);
+          }
         } catch (error) {
           console.error('解析WebSocket消息失败:', error);
         }
@@ -82,27 +100,29 @@ export const useWebSocket = () => {
           console.error('WebSocket连接异常关闭');
         }
         
-        setConnectStatus('disconnected');
+        setConnectStatus(WebSocketStatus.CLOSED);
         
         // 尝试重新连接
-        handleReconnect();
+        if (handleReconnectRef.current) {
+          handleReconnectRef.current();
+        }
       };
       
       // 连接错误
       socket.current.onerror = (error) => {
         console.error('WebSocket错误:', error);
-        setConnectStatus('failed');
+        setConnectStatus(WebSocketStatus.ERROR);
       };
       
     } catch (error) {
       console.error('创建WebSocket连接失败:', error);
-      setConnectStatus('failed');
+      setConnectStatus(WebSocketStatus.ERROR);
       toast.error('无法连接到通信服务');
     }
   }, [wsUrl, isAuthenticated]);
   
   // 发送身份验证消息
-  const sendAuthMessage = useCallback(() => {
+  const sendAuthMessage: SendAuthMessageFn = useCallback(() => {
     if (!socket.current || socket.current.readyState !== WebSocket.OPEN) {
       return;
     }
@@ -123,6 +143,9 @@ export const useWebSocket = () => {
     }
   }, [userType, getCurrentAgentId, getUserId]);
   
+  // 保存引用
+  sendAuthMessageRef.current = sendAuthMessage;
+  
   // 发送消息
   // 使用统一的接口
   const sendMessage = useCallback((message: Record<string, unknown>) => {
@@ -142,9 +165,9 @@ export const useWebSocket = () => {
   }, []);
   
   // 处理重新连接
-  const handleReconnect = useCallback(() => {
+  const handleReconnect: HandleReconnectFn = useCallback(() => {
     if (reconnectAttempts.current >= maxReconnectAttempts) {
-      setConnectStatus('failed');
+      setConnectStatus(WebSocketStatus.ERROR);
       toast.error('无法连接到服务器，请刷新页面重试');
       return;
     }
@@ -155,7 +178,7 @@ export const useWebSocket = () => {
     }
     
     // 设置重连状态
-    setConnectStatus('reconnecting');
+    setConnectStatus(WebSocketStatus.RECONNECTING);
     
     // 指数退避策略
     const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts.current);
@@ -166,12 +189,17 @@ export const useWebSocket = () => {
     // 设置新的定时器
     reconnectTimeoutRef.current = setTimeout(() => {
       reconnectAttempts.current += 1;
-      connectWebSocket();
+      if (connectWebSocketRef.current) {
+        connectWebSocketRef.current();
+      }
     }, delay);
-  }, [connectWebSocket]);
+  }, []);
+  
+  // 保存引用
+  handleReconnectRef.current = handleReconnect;
   
   // 处理接收到的WebSocket消息
-  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+  const handleWebSocketMessage: HandleWebSocketMessageFn = useCallback((message: WebSocketMessage) => {
     switch (message.type) {
       case 'chat_message':
         // 处理聊天消息
@@ -183,7 +211,8 @@ export const useWebSocket = () => {
       case 'customer_status':
         // 处理客户状态变更
         if (message.data && 'customerId' in message.data && 'isOnline' in message.data) {
-          const data = message.data as CustomerStatusData;
+          // 先转为unknown，再转为CustomerStatusData，避免类型错误
+          const data = message.data as unknown as CustomerStatusData;
           handleCustomerStatusChange(
             data.customerId,
             data.isOnline,
@@ -216,6 +245,12 @@ export const useWebSocket = () => {
     }
   }, [addMessage, handleCustomerStatusChange, setCustomers]);
   
+  // 保存引用
+  handleWebSocketMessageRef.current = handleWebSocketMessage;
+  
+  // 保存connectWebSocket引用
+  connectWebSocketRef.current = connectWebSocket;
+  
   // 在组件卸载时关闭连接
   useEffect(() => {
     return () => {
@@ -234,18 +269,10 @@ export const useWebSocket = () => {
     connectWebSocket,
     sendMessage,
     connectStatus,
-    isConnected: connectStatus === 'connected',
-    isConnecting: connectStatus === 'connecting' || connectStatus === 'reconnecting',
-    isFailed: connectStatus === 'failed'
+    isConnected: connectStatus === WebSocketStatus.OPEN,
+    isConnecting: connectStatus === WebSocketStatus.CONNECTING || connectStatus === WebSocketStatus.RECONNECTING,
+    isFailed: connectStatus === WebSocketStatus.ERROR
   };
 };
 
-// 使用 useEffect 处理依赖关系
-  useEffect(() => {
-    // 更新 connectWebSocket 中使用的函数引用
-    const currentConnectWebSocket = connectWebSocket;
-    
-    return () => {
-      // 清理
-    };
-  }, [connectWebSocket, sendAuthMessage, handleReconnect, handleWebSocketMessage]);
+export default useWebSocket;

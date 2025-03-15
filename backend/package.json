@@ -11,6 +11,7 @@
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.21.0",
+        "chat-server": "file:",
         "cors": "^2.8.5",
         "crypto": "^1.0.1",
         "dotenv": "^16.4.7",

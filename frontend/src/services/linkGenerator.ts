@@ -1,13 +1,13 @@
 // src/services/linkGenerator.ts
 import { nanoid } from 'nanoid';
 import CryptoJS from 'crypto-js';
-import { tokenData } from '../types'; // 修正: 导入 TokenData 类型 (确保路径和接口名正确)
+import { TokenData } from '../types'; // 正确导入TokenData类型
 
 /**
  * 链接生成器 - 负责生成唯一的分享链接和加密token
  */
 export class LinkGenerator {
-  private static readonly encryptionKey = process.env.REACT_APP_LINK_ENCRYPTION_KEY || 'default-secret-key';
+  private static readonly encryptionKey = import.meta.env.VITE_LINK_ENCRYPTION_KEY || 'default-secret-key';
 
   /**
    * 生成唯一的链接ID
@@ -24,7 +24,7 @@ export class LinkGenerator {
    * @param data 需要加密的数据 (类型为 TokenData)
    * @returns 加密后的安全token
    */
-  static generateEncryptedToken(data: tokenData): string { // 修正: 参数类型应为 TokenData
+  static generateEncryptedToken(data: TokenData): string {
     // 加密数据
     const encryptedToken = CryptoJS.AES.encrypt(
       JSON.stringify(data),
@@ -43,7 +43,7 @@ export class LinkGenerator {
    * @param token 加密的token
    * @returns 解密后的数据 (类型为 TokenData 或 null)
    */
-  static decryptToken(token: string): tokenData | null { // 修正: 返回类型应为 TokenData 或 null
+  static decryptToken(token: string): TokenData | null {
     try {
       // 将URL安全字符替换回来
       const normalizedToken = token
@@ -61,7 +61,7 @@ export class LinkGenerator {
       //   return null;
       // }
 
-      return decryptedData as tokenData; // 类型断言为 TokenData
+      return decryptedData as TokenData; // 类型断言为 TokenData
     } catch (error) {
       console.error('解密token失败:', error);
       return null;

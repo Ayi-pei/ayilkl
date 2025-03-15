@@ -29,7 +29,7 @@ export const uploadAvatar = async (file: File): Promise<string> => {
 
   try {
     // 上传到Supabase Storage
-    const { error: uploadError, data: uploadData } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, file, {
         cacheControl: '3600',

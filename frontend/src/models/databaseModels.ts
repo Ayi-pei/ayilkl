@@ -73,8 +73,9 @@ export interface ChatLink {
  * 统计数据模型
  */
 export interface Stats {
-  totalCustomers: number;
-  totalAgents: number;    // 总客服数
-  totalMessages: number;  // 总消息数
-  todayMessages: number;  // 今日消息数
+  agentsCount: number;      // 总客服数
+  activeKeysCount: number;  // 活跃密钥数
+  customersCount: number;   // 总客户数
+  messagesCount: number;    // 总消息数
+  lastUpdated: string;      // 最后更新时间
 }

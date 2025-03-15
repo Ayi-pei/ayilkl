@@ -116,7 +116,6 @@ if (false) {
 
 // Red indicators show where an error occurred. The error message
 // is also shown beside the error
-
 throw new Error('Kaboom! This is just a test error.');
 
 // ----- 🌟 MUCH MORE -----

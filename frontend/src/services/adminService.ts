@@ -5,19 +5,6 @@ import { Agent, AgentKey, Stats } from '../models/databaseModels';
 import { KeyService } from './keyService';
 import { v4 as uuidv4 } from 'uuid';
 
-// 环境变量类型声明
-declare global {
-  interface ImportMeta {
-    env: {
-      VITE_ADMIN_KEY: string;
-      VITE_SUPABASE_URL: string;
-      VITE_SUPABASE_ANON_KEY: string;
-      VITE_LINK_ENCRYPTION_KEY: string;
-      [key: string]: string;
-    }
-  }
-}
-
 /**
  * 管理员服务类 - 提供管理客服和密钥的功能
  */
@@ -253,43 +240,53 @@ export class AdminService {
         await AdminService.adminLogin();
       }
       
-      // 获取总客户数
-      const { count: totalCustomers } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true });
-        
-      // 获取总客服数
-      const { count: totalAgents } = await supabase
+      // 获取客服数量
+      const { data: agents, error: agentsError } = await supabase
         .from('agents')
-        .select('*', { count: 'exact', head: true });
+        .select('id');
         
-      // 获取总消息数
-      const { count: totalMessages } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true });
-        
-      // 获取今日消息数
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      if (agentsError) throw agentsError;
       
-      const { count: todayMessages } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .gte('timestamp', today.toISOString());
+      // 获取活跃密钥数量
+      const { data: activeKeys, error: keysError } = await supabase
+        .from('agent_keys')
+        .select('id')
+        .eq('is_active', true);
         
+      if (keysError) throw keysError;
+      
+      // 获取客户数量
+      const { data: customers, error: customersError } = await supabase
+        .from('customers')
+        .select('id');
+        
+      if (customersError) throw customersError;
+      
+      // 获取消息数量
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('id');
+        
+      if (messagesError) throw messagesError;
+      
       return {
-        totalCustomers: totalCustomers || 0,
-        totalAgents: totalAgents || 0,
-        totalMessages: totalMessages || 0,
-        todayMessages: todayMessages || 0
+        agentsCount: agents?.length || 0,
+        activeKeysCount: activeKeys?.length || 0,
+        customersCount: customers?.length || 0,
+        messagesCount: messages?.length || 0,
+        lastUpdated: new Date().toISOString()
       };
     } catch (error) {
-      console.error('获取统计数据失败:', error);
+      console.error('获取系统统计数据失败:', error);
+      toast.error('获取系统统计数据失败');
+      
+      // 返回空数据
       return {
-        totalCustomers: 0,
-        totalAgents: 0,
-        totalMessages: 0,
-        todayMessages: 0
+        agentsCount: 0,
+        activeKeysCount: 0,
+        customersCount: 0,
+        messagesCount: 0,
+        lastUpdated: new Date().toISOString()
       };
     }
   }

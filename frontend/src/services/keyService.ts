@@ -1,23 +1,9 @@
 // src/services/keyService.ts
-import { nanoid } from 'nanoid';
 import { toast } from '../components/common/Toast';
 import { KeyVerificationResult as BaseKeyVerificationResult, KeyData, KeyScope, KeyPurpose } from '../types';
 import { supabase } from './supabase';
 import { KeyManager } from './keyManager';
 import { v4 as uuidv4 } from 'uuid';
-
-// 环境变量类型声明，解决TypeScript错误
-declare global {
-  interface ImportMeta {
-    env: {
-      VITE_ADMIN_KEY: string;
-      VITE_SUPABASE_URL: string;
-      VITE_SUPABASE_ANON_KEY: string;
-      VITE_LINK_ENCRYPTION_KEY: string;
-      [key: string]: string;
-    }
-  }
-}
 
 // 扩展原有的KeyVerificationResult接口，添加linkId属性
 interface ExtendedKeyVerificationResult extends BaseKeyVerificationResult {
