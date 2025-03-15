@@ -8,7 +8,8 @@
     "editor.defaultFormatter": "ckolkman.vscode-postgres"
   },
   "files.associations": {
-    "*.sql": "postgres"
+    "*.sql": "postgres",
+    "*.js": "javascript"
   },
   "postgres.connections": [
     {
@@ -20,5 +21,6 @@
       "password": "${env:SUPABASE_DB_PASSWORD}"
     }
   ],
-  "json.schemaDownload.enable": false
+  "json.schemaDownload.enable": false,
+  "typescript.tsdk": "node_modules\\typescript\\lib"
 }

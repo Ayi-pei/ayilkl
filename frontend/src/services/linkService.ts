@@ -1,14 +1,12 @@
 // src/services/linkService.ts
 import { apiClient } from './apiClient';
+import { LinkData, LinkUser } from '../types/index';
 
-export interface LinkData {
-  id: string;
-  code: string;
-  url: string;
-  expiresAt: string;
-  createdAt: string;
-  accessCount?: number;
-  isActive?: boolean;
+// 添加链接统计接口
+export interface LinkStats {
+  totalVisits: number;
+  uniqueUsers: number;
+  lastAccessed: string;
 }
 
 export interface LinkInfo {
@@ -26,22 +24,6 @@ export interface LinkInfo {
     status: string;
   };
   agentId?: string; // 添加 agentId 属性，兼容现有代码
-}
-
-// 添加链接统计接口
-export interface LinkStats {
-  totalVisits: number;
-  uniqueUsers: number;
-  lastAccessed: string;
-}
-
-// 添加链接用户接口
-export interface LinkUser {
-  id: string;
-  nickname: string;
-  avatar?: string;
-  firstVisit: string;
-  lastSeen: string;
 }
 
 export class LinkService {

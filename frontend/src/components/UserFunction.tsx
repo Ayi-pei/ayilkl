@@ -66,7 +66,11 @@ interface ExtendedMessage extends Omit<Message, 'type' | 'sender'> {
   sender: 'user' | 'agent' | 'customer' | 'system';
 }
 
-const UserFunction: React.FC = () => {
+interface UserFunctionProps {
+  className?: string;
+}
+
+const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
   const { 
     userSettings, 
     updateUserSettings,

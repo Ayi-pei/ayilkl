@@ -1,8 +1,8 @@
 // src/services/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 import CryptoJS from 'crypto-js';
- 
-// Supabase 配置
+
+// 使用统一的Supabase配置
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 

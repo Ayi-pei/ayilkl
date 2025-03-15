@@ -1,10 +1,10 @@
-import supabase from './supabaseClient';
 
+const supabaseClient = require('./supabaseClient.js');
 async function testConnection() {
   try {
     // 尝试执行一个简单的查询
-    const { data, error } = await supabase
-      .from('profiles')  // 修改为您实际存在的表名
+    const { Data, error } = await supabase
+      .from('agentsData')  // 修改为您实际存在的表名
       .select('count(*)')
       .limit(1)
     

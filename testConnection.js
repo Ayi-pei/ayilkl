@@ -1,5 +1,5 @@
 // 测试连接脚本
-const testConnection = require('./src/utils/testConnectionCJS.js');
+const testConnection = require('./src/utils/testConnectionCJS.cjs');
 
 testConnection()
   .then(result => {

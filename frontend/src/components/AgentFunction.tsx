@@ -1,5 +1,5 @@
 // 修改导入，添加我们定义的类型和常量
-import { LinkService, LinkUser, LinkData } from '../services/linkService';
+import { LinkService } from '../services/linkService';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import Picker from 'emoji-picker-react';
@@ -14,7 +14,9 @@ import {
   isValidTodayKey,
   UploadResult,
   KeyVerificationResult,
-  LinkVerificationResult
+  LinkVerificationResult,
+  LinkUser,
+  LinkData
 } from '../types/index';
 import Upload, { RcFile } from 'antd/lib/upload';
 import { QRCode } from 'react-qrcode-logo';
@@ -23,8 +25,8 @@ import { uploadAvatar } from '../services/api/uploadAvatar';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import '../styles/AgentFunction.css';
-import { type UserOutlined, type FileOutlined, type AudioOutlined, CloseOutlined, WarningOutlined, type PlusOutlined, DeleteOutlined, SettingOutlined, QrcodeOutlined, LinkOutlined, LogoutOutlined, InfoCircleOutlined, MessageOutlined, SmileOutlined, PictureOutlined, SendOutlined, BarChartOutlined, TeamOutlined, StopOutlined, LoadingOutlined, type CopyOutlined } from '@ant-design/icons';
-import { type Tabs, type Select, type Input, type Modal, type List, type Avatar, type Empty, type Badge, type Button, type Divider, type Space, type Card, type Tag, type Tooltip, type Drawer, Switch, Spin } from 'antd';
+import { UserOutlined, FileOutlined, AudioOutlined, CloseOutlined, WarningOutlined, PlusOutlined, DeleteOutlined, SettingOutlined, QrcodeOutlined, LinkOutlined, LogoutOutlined, InfoCircleOutlined, MessageOutlined, SmileOutlined, PictureOutlined, SendOutlined, BarChartOutlined, TeamOutlined, StopOutlined, LoadingOutlined, CopyOutlined } from '@ant-design/icons';
+import { Tabs, Select, Input, Modal, List, Avatar, Empty, Badge, Button, Divider, Space, Card, Tag, Tooltip, Drawer, Switch, Spin } from 'antd';
 import { nanoid } from 'nanoid';
 import type { useState, useRef, useEffect } from 'react';
 import type { Form } from 'react-router-dom';
@@ -34,12 +36,15 @@ interface EmojiData {
   emoji: string;
 }
 
-const { TabPane } = Tabs;
+interface AgentFunctionProps {
+  className?: string;
+}
+
+// 不再使用 TabPane，改用 items 属性
 const { Option } = Select;
 const { TextArea } = Input;
 
-const AgentFunction: React.FC = () => {
-  // 从store获取状态和方法
+- const AgentFunction: React.FC = () => {
   const {
     customers,
     selectedCustomer,
@@ -897,111 +902,129 @@ const renderRightPanel = () => {
         onClose={() => setShowSettingsDrawer(false)}
         open={showSettingsDrawer}
       >
-        <Tabs activeKey={activeSettingsTab} onChange={setActiveSettingsTab}>
-          <TabPane tab="个人设置" key="1">
-            <Form layout="vertical">
-              <Form.Item label="客服昵称">
-                <Input 
-                  value={tempNickname} 
-                  onChange={e => setTempNickname(e.target.value)}
-                  placeholder="输入昵称"
-                />
-              </Form.Item>
-              <Form.Item label="状态">
-                <Select value={tempStatus} onChange={setTempStatus}>
-                  <Option value="online">在线</Option>
-                  <Option value="busy">忙碌</Option>
-                  <Option value="offline">离线</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item label="声音提醒">
-                <Switch checked={soundEnabled} onChange={setSoundEnabled} />
-              </Form.Item>
-              <Form.Item>
-                <Button type="primary">保存设置</Button>
-              </Form.Item>
-            </Form>
-          </TabPane>
-
-          <TabPane tab="欢迎语设置" key="2">
-            <Form layout="vertical">
-              <Form.Item label="欢迎语">
-                <TextArea
-                  rows={4}
-                  // 修复：使用数组的第一个元素作为文本框的值
-                  value={newWelcomeMessages[0] || ''}
-                  // 修复：更新数组的第一个元素
-                  onChange={e => setNewWelcomeMessages([e.target.value])}
-                  placeholder="输入欢迎语"
-                />
-              </Form.Item>
-              <Form.Item>
-                <Button 
-                  type="primary" 
-                  onClick={handleWelcomeMessageUpdate}
-                >
-                  保存欢迎语
-                </Button>
-              </Form.Item>
-            </Form>
-          </TabPane>
-          
-          <TabPane tab="黑名单" key="3">
-            <List
-              dataSource={blacklist}
-              renderItem={item => (
-                <List.Item
-                  actions={[
+        <Tabs 
+          activeKey={activeSettingsTab} 
+          onChange={setActiveSettingsTab}
+          items={[
+            {
+              key: "1",
+              label: "个人设置",
+              children: (
+                <Form layout="vertical">
+                  <Form.Item label="客服昵称">
+                    <Input 
+                      value={tempNickname} 
+                      onChange={e => setTempNickname(e.target.value)}
+                      placeholder="输入昵称"
+                    />
+                  </Form.Item>
+                  <Form.Item label="状态">
+                    <Select value={tempStatus} onChange={setTempStatus}>
+                      <Option value="online">在线</Option>
+                      <Option value="busy">忙碌</Option>
+                      <Option value="offline">离线</Option>
+                    </Select>
+                  </Form.Item>
+                  <Form.Item label="声音提醒">
+                    <Switch checked={soundEnabled} onChange={setSoundEnabled} />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button type="primary">保存设置</Button>
+                  </Form.Item>
+                </Form>
+              )
+            },
+            {
+              key: "2",
+              label: "欢迎语设置",
+              children: (
+                <Form layout="vertical">
+                  <Form.Item label="欢迎语">
+                    <TextArea
+                      rows={4}
+                      // 修复：使用数组的第一个元素作为文本框的值
+                      value={newWelcomeMessages[0] || ''}
+                      // 修复：更新数组的第一个元素
+                      onChange={e => setNewWelcomeMessages([e.target.value])}
+                      placeholder="输入欢迎语"
+                    />
+                  </Form.Item>
+                  <Form.Item>
                     <Button 
-                      type="link" 
-                      onClick={() => handleRemoveFromBlacklist(item.id)}
+                      type="primary" 
+                      onClick={handleWelcomeMessageUpdate}
                     >
-                      解除拉黑
+                      保存欢迎语
                     </Button>
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={<Avatar src={item.avatar} icon={<UserOutlined />} />}
-                    title={item.nickname}
-                    description={`ID: ${item.id}`}
-                  />
-                </List.Item>
-              )}
-              locale={{
-                emptyText: <Empty description="黑名单为空" />
-              }}
-            />
-          </TabPane>
-          <TabPane tab="卡密管理" key="4">
-            <Form layout="vertical">
-              <Form.Item label="当前卡密">
-                <Input value={licenseKey} disabled />
-              </Form.Item>
-              <Form.Item label="有效期至">
-                <Input 
-                  value={licenseExpiry ? licenseExpiry.toLocaleDateString() : '未知'} 
-                  disabled 
+                  </Form.Item>
+                </Form>
+              )
+            },
+            {
+              key: "3",
+              label: "黑名单",
+              children: (
+                <List
+                  dataSource={blacklist}
+                  renderItem={item => (
+                    <List.Item
+                      actions={[
+                        <Button 
+                          type="link" 
+                          onClick={() => handleRemoveFromBlacklist(item.id)}
+                        >
+                          解除拉黑
+                        </Button>
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<Avatar src={item.avatar} icon={<UserOutlined />} />}
+                        title={item.nickname}
+                        description={`ID: ${item.id}`}
+                      />
+                    </List.Item>
+                  )}
+                  locale={{
+                    emptyText: <Empty description="黑名单为空" />
+                  }}
                 />
-              </Form.Item>
-              <Form.Item label="新卡密">
-                <Input.Password 
-                  placeholder="输入新卡密" 
-                  value={newLicenseKey}
-                  onChange={e => setNewLicenseKey(e.target.value)}
-                />
-              </Form.Item>
-              <Form.Item>
-                <Button 
-                  type="primary" 
-                  onClick={handleUpdateLicense}
-                  loading={isLoading}
-                >
-                  更新卡密
-                </Button>
-              </Form.Item>
-            </Form>
-          </TabPane>
-        </Tabs>
+              )
+            },
+            {
+              key: "4",
+              label: "卡密管理",
+              children: (
+                <Form layout="vertical">
+                  <Form.Item label="当前卡密">
+                    <Input value={licenseKey} disabled />
+                  </Form.Item>
+                  <Form.Item label="有效期至">
+                    <Input 
+                      value={licenseExpiry ? licenseExpiry.toLocaleDateString() : '未知'} 
+                      disabled 
+                    />
+                  </Form.Item>
+                  <Form.Item label="新卡密">
+                    <Input.Password 
+                      placeholder="输入新卡密" 
+                      value={newLicenseKey}
+                      onChange={e => setNewLicenseKey(e.target.value)}
+                    />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button 
+                      type="primary" 
+                      loading={isLoading}
+                      onClick={handleUpdateLicense}
+                    >
+                      更新卡密
+                    </Button>
+                  </Form.Item>
+                </Form>
+              )
+            }
+          ]}
+        />
       </Drawer>
       
       <Drawer

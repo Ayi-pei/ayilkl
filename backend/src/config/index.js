@@ -7,7 +7,8 @@ const config = {
   
   // Supabase配置
   supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_SERVICE_KEY,
+  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY,
+  supabaseAnonKey: process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY,
   
   // JWT配置
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',

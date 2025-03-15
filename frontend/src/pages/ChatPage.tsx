@@ -11,11 +11,10 @@ import '../styles/chatPage.css';
 import { toast } from '../components/common/Toast';
 import { 
   COMPONENT_CLASS_PREFIX, 
-  getTodayPresetKey, 
   isValidTodayKey,
-  UserType,
   LinkVerificationResult
 } from '../types/index';
+import { LinkService } from '../services/linkService';
 
 const ChatPage: React.FC = () => {
   const { linkId } = useParams<{ linkId: string }>();
@@ -24,9 +23,7 @@ const ChatPage: React.FC = () => {
     userType, 
     initializeChat,
     isInitializing,
-    // 修复：如果 setUserType 不存在，需要在 chatStore 中添加
-    // 暂时注释掉，等待 chatStore 更新
-    // setUserType
+    setUserType
   } = useChatStore();
   
   const { isAuthenticated, agentData, login } = useAuthStore();
@@ -45,7 +42,7 @@ const ChatPage: React.FC = () => {
         if (linkId) {
           // 验证链接有效性
           try {
-            const { LinkService } = await import('../services/linkService');
+            const { LinkService } = await LinkService;
             const linkInfo = await LinkService.verifyLink(linkId);
             
             if (isAuthenticated && userType === 'agent') {
@@ -127,6 +124,9 @@ const ChatPage: React.FC = () => {
     initPage();
   }, [linkId, isAuthenticated, userType, agentData, initializeChat, connectWebSocket, navigate, login]);
 
+  // 根据用户类型渲染不同的聊天界面
+  const chatPageClass = COMPONENT_CLASS_PREFIX.CHAT_PAGE;
+
   // 处理错误情况
   if (error) {
     return (
@@ -155,32 +155,8 @@ const ChatPage: React.FC = () => {
     );
   }
 
-  // 根据用户类型渲染不同的聊天界面
   return (
     <div className="chat-page-container">
-      const chatPageClass = COMPONENT_CLASS_PREFIX.CHAT_PAGE;
-      
-      // 验证链接时可以使用今日密钥验证
-      const verifyLinkWithKey = async (linkId: string) => {
-        try {
-          const result = await LinkService.verifyLink(linkId);
-          
-          // 如果链接无效，可以尝试使用今日密钥
-          if (!result.valid && linkId && isValidTodayKey(linkId)) {
-            // 今日密钥有效，可以直接授权
-            return {
-              valid: true,
-              message: '使用今日预设密钥验证成功',
-              agentId: 'admin', // 或者其他默认值
-            } as LinkVerificationResult;
-          }
-          
-          return result;
-        } catch (error) {
-          console.error('验证链接失败:', error);
-          return { valid: false, message: '验证失败，请重试' };
-        }
-      };
       {userType === 'agent' ? (
         <AgentFunction className={`${chatPageClass}-agent-function`} />
       ) : (

@@ -29,6 +29,8 @@ const App: React.FC = () => {
           </ProtectedRoute>
         } />
         
+        <Route path="/chat/:linkId" element={<ChatPage />} />
+        
         <Route path="/admin" element={
           <ProtectedRoute requiredUserType="admin">
             <AdminPage />

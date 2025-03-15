@@ -8,9 +8,8 @@ require('dotenv').config();
 
 // 使用服务端角色密钥创建Supabase客户端
 // 注意：这个密钥必须保密，只在服务端使用
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // 服务角色密钥
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const config = require('../src/config');
+const supabase = createClient(config.supabaseUrl, config.supabaseKey); // 使用统一配置
 
 // 验证管理员身份中间件
 const verifyAdmin = (req, res, next) => {

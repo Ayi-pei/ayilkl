@@ -27,9 +27,9 @@ const io = new Server(server, {
 });
 
 // 初始化Supabase客户端
-const supabaseUrl = process.env.SUPABASE_URL || 'https://zmjyodxdvctygjphghxy.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptanlvZHhkdmN0eWdqcGhnaHh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NzY1NTQsImV4cCI6MjA1NzA1MjU1NH0.P5cG0-S4pS1ul7U8FlEBrMIe81r8chWyplkhnSVtJGE';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// 使用统一的配置，避免硬编码密钥
+const config = require('./src/config');
+const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
 // 存储用户连接
 const connectedUsers = new Map();
@@ -271,8 +271,8 @@ app.post('/api/verify-key', async (req, res) => {
 // 启动服务器
 // server.js
 require('dotenv').config();
-const { server: appServer } = require('./src/app');
-const config = require('./src/config');
+const { server: appServer
+} = require('./src/app');
 
 const PORT = config.port || 3001;
 

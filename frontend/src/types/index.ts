@@ -376,3 +376,23 @@ export interface TempUserCreationResult {
   };
   agent?: AgentData;
 }
+
+// 链接数据
+export interface LinkData {
+  id: string;
+  code: string;
+  url: string;
+  expiresAt: string;
+  createdAt: string;
+  accessCount?: number;
+  isActive?: boolean;
+}
+
+// 链接用户
+export interface LinkUser {
+  id: string;
+  nickname: string;
+  avatar?: string;
+  firstVisit: string;
+  lastSeen: string;
+}
