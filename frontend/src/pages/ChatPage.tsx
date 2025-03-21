@@ -42,7 +42,7 @@ const ChatPage: React.FC = () => {
         if (linkId) {
           // 验证链接有效性
           try {
-            const { LinkService } = await LinkService;
+            const { LinkService } = await import('../services/linkService');
             const linkInfo = await LinkService.verifyLink(linkId);
             
             if (isAuthenticated && userType === 'agent') {

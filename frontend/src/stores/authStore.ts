@@ -2,7 +2,8 @@
 import { create } from 'zustand';
 import { KeyService } from '../services/keyService';
 import { KeyManager } from '../services/keyManager';
-import { KeyScope, KeyPurpose } from '../types/index';
+import { KeyScope, KeyPurpose, type AgentData, UserType } from '@/types/index';
+import { Agent } from '../api/types';
 
 // 定义认证状态接口
 // 更新 AuthState 接口

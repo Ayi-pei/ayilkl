@@ -1,9 +1,13 @@
 import React from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
+import { useUserStore } from '../../stores/userStore';
+import { getCurrentTheme } from '../../utils/themeUtils';
 import './DebugPanel.css';
 
 const DebugPanel: React.FC = () => {
+  const { theme } = useUserStore();
+  const currentTheme = getCurrentTheme();
   const { isAuthenticated, userType, agentData } = useAuthStore();
   const { isInitializing, messages } = useChatStore();
 
@@ -12,7 +16,7 @@ const DebugPanel: React.FC = () => {
   }
 
   return (
-    <div className="debug-panel">
+    <div className={`debug-panel ${currentTheme === 'dark' ? 'debug-panel-dark' : ''}`}>
       <h4>调试信息</h4>
       <p>认证状态: {isAuthenticated ? '已登录' : '未登录'}</p>
       <p>用户类型: {userType || '未设置'}</p>

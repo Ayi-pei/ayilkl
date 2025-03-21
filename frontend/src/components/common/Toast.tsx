@@ -1,7 +1,10 @@
 // src/components/common/Toast.tsx
 import { nanoid } from 'nanoid'; // 使用已在项目中的nanoid替代uuid
 import { toast as reactToast, ToastContainer as ReactToastContainer } from 'react-toastify';
+import { useUserStore } from '../../stores/userStore';
+import { getCurrentTheme } from '../../utils/themeUtils';
 import 'react-toastify/dist/ReactToastify.css';
+import './Toast.css';
 
 // 全局Toast接口
 export const toast = {
@@ -26,4 +29,23 @@ export const toast = {
 };
 
 // 导出ToastContainer组件以在App.tsx中使用
-export const ToastContainer = ReactToastContainer;
+export const ToastContainer: React.FC = () => {
+  const { theme } = useUserStore();
+  const currentTheme = getCurrentTheme();
+
+  return (
+    <ReactToastContainer
+      position="top-right"
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme={currentTheme}
+      className={`toast-container ${currentTheme === 'dark' ? 'toast-container-dark' : ''}`}
+    />
+  );
+};

@@ -5,16 +5,8 @@ import { zhCN } from 'date-fns/locale';
 import Picker from 'emoji-picker-react';
 // 使用我们定义的生成ID函数替代nanoid
 import { 
-  COMPONENT_CLASS_PREFIX, 
-  NANOID_PREFIX, 
-  generatePrefixedId,
   Message, 
   Customer,
-  getTodayPresetKey,
-  isValidTodayKey,
-  UploadResult,
-  KeyVerificationResult,
-  LinkVerificationResult,
   LinkUser,
   LinkData
 } from '../types/index';
@@ -26,10 +18,13 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import '../styles/AgentFunction.css';
 import { UserOutlined, FileOutlined, AudioOutlined, CloseOutlined, WarningOutlined, PlusOutlined, DeleteOutlined, SettingOutlined, QrcodeOutlined, LinkOutlined, LogoutOutlined, InfoCircleOutlined, MessageOutlined, SmileOutlined, PictureOutlined, SendOutlined, BarChartOutlined, TeamOutlined, StopOutlined, LoadingOutlined, CopyOutlined } from '@ant-design/icons';
-import { Tabs, Select, Input, Modal, List, Avatar, Empty, Badge, Button, Divider, Space, Card, Tag, Tooltip, Drawer, Switch, Spin } from 'antd';
+import { Tabs, Select, Input, Modal, List, Avatar, Empty, Badge, Button, Divider, Space, Card, Tag, Tooltip, Drawer, Switch, Spin, Form } from 'antd';
 import { nanoid } from 'nanoid';
-import type { useState, useRef, useEffect } from 'react';
-import type { Form } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useUserStore } from '../stores/userStore';
+import { getCurrentTheme } from '../utils/themeUtils';
+// 删除与antd Form冲突的导入
+// import type { Form } from 'react-router-dom';
 
 // 定义 EmojiData 接口
 interface EmojiData {
@@ -44,7 +39,9 @@ interface AgentFunctionProps {
 const { Option } = Select;
 const { TextArea } = Input;
 
-- const AgentFunction: React.FC = () => {
+const AgentFunction = ({ className }: AgentFunctionProps) => {
+  const { theme } = useUserStore();
+  const currentTheme = getCurrentTheme();
   const {
     customers,
     selectedCustomer,
@@ -176,7 +173,7 @@ const { TextArea } = Input;
 
     fetchLicenseInfo();
   }, []);
-  const handleUpdateLicense = async () => {
+  const handleUpdateLicense = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!newLicenseKey.trim()) {
       toast.error('请输入有效的卡密');
       return;
@@ -230,7 +227,7 @@ const { TextArea } = Input;
   };
   
   // 处理按键按下
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -246,6 +243,30 @@ const { TextArea } = Input;
   const handleQuickReplyClick = (content: string) => {
     setInputMessage(content);
     setShowRightPanel(null);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle file upload
+  };
+
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle audio upload
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle image upload
+  };
+
+  const handleZipUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle zip upload
+  };
+
+  const handleExeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle exe upload
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle input change
   };
   
   // 处理添加新快速回复
@@ -476,7 +497,7 @@ const { TextArea } = Input;
         </div>
         {lastMessage && lastMessage.timestamp && (
           <div className="message-time">
-            {formatDistanceToNow(new Date(lastMessage.timestamp), { 
+            {formatDistanceToNow(new Date(lastMessage.timestamp as string), { 
               addSuffix: true,
               locale: zhCN
             })}
@@ -492,7 +513,7 @@ const { TextArea } = Input;
     
     return (
       <div 
-        key={message.id} 
+        key={message.id as React.Key} 
         className={`message-item ${isAgent ? 'agent-message' : 'customer-message'}`}
       >
         {!isAgent && (
@@ -510,7 +531,7 @@ const { TextArea } = Input;
           
           {message.type === 'image' && (
             <div className="image-message">
-              <img src={message.content} alt="图片消息" />
+              <img src={message.content as string} alt="图片消息" />
             </div>
           )}
           
@@ -547,9 +568,10 @@ const { TextArea } = Input;
   // 渲染右侧面板
 
 const renderRightPanel = () => {
-  if (!showRightPanel) return null;
-  
-    return (
+  if (!showRightPanel) {
+    return null;
+  }
+  return (
       <div className="right-panel">
         <div className="panel-header">
           <h3>
@@ -576,7 +598,9 @@ const renderRightPanel = () => {
                 <p>ID: {selectedCustomer.id}</p>
                 <p>状态: {selectedCustomer.isOnline ? '在线' : '离线'}</p>
                 <p>IP地址: {(selectedCustomer as ExtendedCustomer).ipAddress || '未知'}</p>
-                <p>设备: {(selectedCustomer as ExtendedCustomer).device || '未知'}</p>
+                <div className="device">
+                  {(selectedCustomer as ExtendedCustomer).device || '未知设备'}
+                </div>
                 <p>首次访问: {new Date(selectedCustomer.firstVisit).toLocaleString()}</p>
                 <p>最后访问: {new Date(selectedCustomer.lastSeen).toLocaleString()}</p>
               </div>
@@ -604,19 +628,21 @@ const renderRightPanel = () => {
           <div className="quick-reply-content">
             <div className="add-quick-reply">
               <Form layout="vertical">
-                <Form.Item label="标题">
+                <Form.Item label="标题" required>
                   <Input 
                     value={newQuickReply.title} 
                     onChange={e => setNewQuickReply({...newQuickReply, title: e.target.value})}
                     placeholder="输入快速回复标题"
+                    required
                   />
                 </Form.Item>
-                <Form.Item label="内容">
+                <Form.Item label="内容" required>
                   <TextArea 
                     rows={4} 
                     value={newQuickReply.content} 
                     onChange={e => setNewQuickReply({...newQuickReply, content: e.target.value})}
                     placeholder="输入快速回复内容"
+                    required
                   />
                 </Form.Item>
                 <Form.Item>
@@ -650,7 +676,10 @@ const renderRightPanel = () => {
                       />
                     }
                     hoverable
-                    onClick={() => handleQuickReplyClick(item.content)}
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      handleQuickReplyClick(item.content);
+                    }}
                   >
                     <div className="quick-reply-preview">
                       {item.content.length > 50 

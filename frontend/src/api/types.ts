@@ -2,7 +2,14 @@
 // 定义API接口类型
 
 // 用户类型
+export enum UserType {
+  CUSTOMER = 'customer',
+  AGENT = 'agent',
+  ADMIN = 'admin'
+}
+
 export interface User {
+  userType: UserType;
   id: string;
   nickname: string;
   avatar?: string;
@@ -17,8 +24,10 @@ export interface Agent {
   nickname: string;
   avatar?: string;
   email?: string;
-  isOnline: boolean;
+  status: 'online' | 'away' | 'busy';
   lastSeen?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 消息类型
@@ -29,7 +38,8 @@ export interface Message {
   sender: 'user' | 'agent';
   senderId: string;
   recipientId: string;
-  timestamp: string;
+  createdAt: string;
+  isRead: boolean;
   fileName?: string;
   fileSize?: number;
 }

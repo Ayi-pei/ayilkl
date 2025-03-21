@@ -11,16 +11,8 @@ export type ThemeType = 'light' | 'dark';
  * @returns 当前主题类型
  */
 export const getCurrentTheme = (): ThemeType => {
-  // 优先从userStore获取
   const { theme } = useUserStore.getState();
-  if (theme) return theme;
-  
-  // 其次从localStorage获取
-  const savedTheme = localStorage.getItem('theme') as ThemeType;
-  if (savedTheme) return savedTheme;
-  
-  // 最后从系统偏好获取
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return theme || 'light';
 };
 
 /**
@@ -28,8 +20,10 @@ export const getCurrentTheme = (): ThemeType => {
  * @param theme 主题类型
  */
 export const applyTheme = (theme: ThemeType): void => {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
+  const { theme: currentTheme, setTheme } = useUserStore.getState();
+  if (theme !== currentTheme) {
+    setTheme(theme);
+  }
 };
 
 /**
@@ -49,10 +43,14 @@ export const toggleTheme = (): ThemeType => {
 export const watchSystemTheme = (callback: (isDark: boolean) => void): () => void => {
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   
-  const handleChange = (e: MediaQueryListEvent) => {
+  const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
     callback(e.matches);
   };
   
+  // 初始调用一次以设置初始状态
+  handleChange(mediaQuery);
+
+  // 使用新的事件监听API
   mediaQuery.addEventListener('change', handleChange);
   
   // 返回清理函数

@@ -153,18 +153,14 @@ export const useUserStore = create<UserState>((set, get) => ({
   
   // 切换主题
   toggleTheme: () => {
-    const newTheme = get().theme === 'light' ? 'dark' : 'light';
-    set({ theme: newTheme });
-    localStorage.setItem('theme', newTheme);
-    
-    // 更新文档根元素的data-theme属性
-    document.documentElement.setAttribute('data-theme', newTheme);
-    
-    // 如果用户已登录，同步更新到数据库
-    const { userSettings, updateUserSettings } = get();
-    if (userSettings) {
-      updateUserSettings({ theme: newTheme });
-    }
+    const { theme, setTheme } = get();
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  },
+
+  setTheme: (theme: 'light' | 'dark') => {
+    set({ theme });
+    localStorage.setItem('theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
   },
   
   // 切换声音

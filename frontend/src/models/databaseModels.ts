@@ -10,9 +10,9 @@ export interface Agent {
   avatar?: string;
   status: 'online' | 'away' | 'busy';
   email?: string;
-  created_at: string;
-  updated_at: string;
-  share_link_id?: string;
+  createdAt: string;
+  updatedAt: string;
+  shareLinkId?: string;
 }
 
 /**
@@ -22,9 +22,9 @@ export interface AgentKey {
   id: string;
   agent_id: string;
   key: string;
-  created_at: string;
-  expires_at: string;
-  is_active: boolean;
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
   agents?: Agent; // 关联关系
 }
 
@@ -37,9 +37,9 @@ export interface Customer {
   avatar?: string;
   ip?: string;
   device_info?: string;
-  created_at: string;
-  last_seen: string;
-  agent_id?: string; // 关联到的客服ID
+  createdAt: string;
+  lastSeen: string;
+  agentId?: string; // 关联到的客服ID
 }
 
 /**
@@ -47,13 +47,13 @@ export interface Customer {
  */
 export interface Message {
   id: string;
-  sender_id: string;
-  recipient_id: string;
+  senderId: string;
+  recipientId: string;
   content: string;
-  message_type: 'text' | 'image' | 'file';
-  file_url?: string;
-  timestamp: string;
-  is_read: boolean;
+  messageType: 'text' | 'image' | 'file';
+  fileUrl?: string;
+  createdAt: string;
+  isRead: boolean;
 }
 
 /**
@@ -61,12 +61,12 @@ export interface Message {
  */
 export interface ChatLink {
   id: string;
-  link_id: string;
-  agent_id: string;
+  linkId: string;
+  agentId: string;
   token: string;
-  created_at: string;
-  expires_at: string;
-  is_active: boolean;
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
 }
 
 /**

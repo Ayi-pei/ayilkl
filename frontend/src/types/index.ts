@@ -83,10 +83,10 @@ export const NANOID_PREFIX = {
 };
 
 // 生成带前缀的nanoid的辅助函数
+// 注意：此函数已移至utils/idUtils.ts，这里保留接口兼容性
+import { nanoid } from 'nanoid';
 export const generatePrefixedId = (prefix: string, length = 10): string => {
-  // 这里实际使用时需要导入nanoid
-  // 为了类型定义，这里只返回一个字符串
-  return `${prefix}${Math.random().toString(36).substring(2, 2 + length)}`;
+  return `${prefix}${nanoid(length)}`;
 };
 
 // 统一 UserType 定义
@@ -95,9 +95,20 @@ export type UserType = 'admin' | 'agent' | 'user' | null;
 // 统一 AgentData 接口
 export interface AgentData {
   id: string;
-  nickname?: string;
+  nickname: string;
   avatar?: string;
-  status?: string;
+  status: 'online' | 'offline' | 'away';
+  lastSeen?: string;
+  settings?: {
+    theme: 'light' | 'dark';
+    soundEnabled: boolean;
+    notifications: boolean;
+  };
+  stats?: {
+    totalChats: number;
+    activeChats: number;
+    rating: number;
+  };
   [key: string]: unknown; // 允许其他未知字段
 }
 
@@ -105,12 +116,13 @@ export interface AgentData {
 export interface Message {
   id: string;
   content: string;
-  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system';
-  sender: 'user' | 'agent' | 'customer' | 'system';
+  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system' | 'video' | 'location';
+  sender: 'user' | 'agent' | 'customer' | 'system' | 'bot';
   recipientId?: string;
   fileName?: string;
   fileSize?: number;
   timestamp: string;
+  createdAt?: string; // 添加createdAt字段，与API和数据库模型保持一致
   [key: string]: unknown; // 允许其他未知字段
 }
 

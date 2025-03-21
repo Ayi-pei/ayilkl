@@ -1,7 +1,63 @@
 // src/utils/messageUtils.ts
-import { nanoid } from 'nanoid';
 import { Message } from '../types';
 import { formatDateTime } from './formatUtils';
+import { generateMessageId } from './idUtils';
+
+/**
+ * 消息类型枚举
+ * 与数据库模型和API保持一致
+ */
+export enum MessageType {
+  TEXT = 'text',
+  IMAGE = 'image',
+  AUDIO = 'audio',
+  FILE = 'file',
+  ZIP = 'zip',
+  EXE = 'exe',
+  SYSTEM = 'system',
+  VIDEO = 'video',  // 添加视频类型
+  LOCATION = 'location'  // 添加位置类型
+}
+
+/**
+ * 发送者类型枚举
+ * 与数据库模型和API保持一致
+ */
+export enum SenderType {
+  USER = 'user',
+  AGENT = 'agent',
+  CUSTOMER = 'customer',
+  SYSTEM = 'system',
+  BOT = 'bot'  // 添加机器人类型
+}
+
+/**
+ * 语言类型
+ */
+export enum LanguageType {
+  ZH = 'zh',  // 中文
+  EN = 'en'   // 英文
+}
+
+/**
+ * 语言文本映射
+ */
+const languageTextMap = {
+  [LanguageType.ZH]: {
+    justNow: '刚刚',
+    minutesAgo: '分钟前',
+    yesterday: '昨天',
+    weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+    weekPrefix: '周'
+  },
+  [LanguageType.EN]: {
+    justNow: 'just now',
+    minutesAgo: 'minutes ago',
+    yesterday: 'Yesterday',
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    weekPrefix: ''
+  }
+};
 
 /**
  * 创建一个新的文本消息对象
@@ -12,16 +68,18 @@ import { formatDateTime } from './formatUtils';
  */
 export const createTextMessage = (
   content: string,
-  sender: 'user' | 'agent' | 'customer' | 'system',
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
   recipientId?: string
 ): Message => {
+  const timestamp = new Date().toISOString();
   return {
-    id: nanoid(),
+    id: generateMessageId(),
     content,
-    type: 'text',
+    type: MessageType.TEXT,
     sender,
     recipientId,
-    timestamp: new Date().toISOString()
+    timestamp,
+    createdAt: timestamp
   };
 };
 
@@ -31,12 +89,14 @@ export const createTextMessage = (
  * @returns 系统消息对象
  */
 export const createSystemMessage = (content: string): Message => {
+  const timestamp = new Date().toISOString();
   return {
-    id: nanoid(),
+    id: generateMessageId(),
     content,
-    type: 'system',
-    sender: 'system',
-    timestamp: new Date().toISOString()
+    type: MessageType.SYSTEM,
+    sender: SenderType.SYSTEM,
+    timestamp,
+    createdAt: timestamp
   };
 };
 
@@ -51,20 +111,22 @@ export const createSystemMessage = (content: string): Message => {
  */
 export const createImageMessage = (
   imageUrl: string,
-  sender: 'user' | 'agent' | 'customer',
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
   fileName?: string,
   fileSize?: number,
   recipientId?: string
 ): Message => {
+  const timestamp = new Date().toISOString();
   return {
-    id: nanoid(),
+    id: generateMessageId(),
     content: imageUrl,
-    type: 'image',
+    type: MessageType.IMAGE,
     sender,
     fileName,
     fileSize,
     recipientId,
-    timestamp: new Date().toISOString()
+    timestamp,
+    createdAt: timestamp
   };
 };
 
@@ -79,20 +141,22 @@ export const createImageMessage = (
  */
 export const createAudioMessage = (
   audioUrl: string,
-  sender: 'user' | 'agent' | 'customer',
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
   fileName?: string,
   fileSize?: number,
   recipientId?: string
 ): Message => {
+  const timestamp = new Date().toISOString();
   return {
-    id: nanoid(),
+    id: generateMessageId(),
     content: audioUrl,
-    type: 'audio',
+    type: MessageType.AUDIO,
     sender,
     fileName,
     fileSize,
     recipientId,
-    timestamp: new Date().toISOString()
+    timestamp,
+    createdAt: timestamp
   };
 };
 
@@ -107,42 +171,109 @@ export const createAudioMessage = (
  */
 export const createFileMessage = (
   fileUrl: string,
-  sender: 'user' | 'agent' | 'customer',
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
   fileName: string,
   fileSize?: number,
   recipientId?: string
 ): Message => {
+  const timestamp = new Date().toISOString();
   return {
-    id: nanoid(),
+    id: generateMessageId(),
     content: fileUrl,
-    type: 'file',
+    type: MessageType.FILE,
     sender,
     fileName,
     fileSize,
     recipientId,
-    timestamp: new Date().toISOString()
+    timestamp,
+    createdAt: timestamp
+  };
+};
+
+/**
+ * 创建一个新的ZIP文件消息对象
+ * @param fileUrl 文件URL
+ * @param sender 发送者类型
+ * @param fileName 文件名
+ * @param fileSize 文件大小
+ * @param recipientId 接收者ID
+ * @returns ZIP文件消息对象
+ */
+export const createZipMessage = (
+  fileUrl: string,
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
+  fileName: string,
+  fileSize?: number,
+  recipientId?: string
+): Message => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: generateMessageId(),
+    content: fileUrl,
+    type: MessageType.ZIP,
+    sender,
+    fileName,
+    fileSize,
+    recipientId,
+    timestamp,
+    createdAt: timestamp
+  };
+};
+
+/**
+ * 创建一个新的可执行文件消息对象
+ * @param fileUrl 文件URL
+ * @param sender 发送者类型
+ * @param fileName 文件名
+ * @param fileSize 文件大小
+ * @param recipientId 接收者ID
+ * @returns 可执行文件消息对象
+ */
+export const createExeMessage = (
+  fileUrl: string,
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
+  fileName: string,
+  fileSize?: number,
+  recipientId?: string
+): Message => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: generateMessageId(),
+    content: fileUrl,
+    type: MessageType.EXE,
+    sender,
+    fileName,
+    fileSize,
+    recipientId,
+    timestamp,
+    createdAt: timestamp
   };
 };
 
 /**
  * 格式化消息时间显示
  * @param timestamp ISO格式的时间戳
+ * @param language 语言类型，默认为中文
  * @returns 格式化后的时间字符串
  */
-export const formatMessageTime = (timestamp: string): string => {
+export const formatMessageTime = (timestamp: string, language: LanguageType = LanguageType.ZH): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
   const diffMs = now.getTime() - messageDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   
-  // 一分钟内显示"刚刚"
+  const langText = languageTextMap[language];
+
+  // 一分钟内显示"刚刚"或"just now"
   if (diffMins < 1) {
-    return '刚刚';
+    return langText.justNow;
   }
   
-  // 一小时内显示"xx分钟前"
+  // 一小时内显示"xx分钟前"或"xx minutes ago"
   if (diffMins < 60) {
-    return `${diffMins}分钟前`;
+    return language === LanguageType.ZH
+      ? `${diffMins}${langText.minutesAgo}`
+      : `${diffMins} ${langText.minutesAgo}`;
   }
   
   // 今天内显示"HH:mm"
@@ -154,7 +285,7 @@ export const formatMessageTime = (timestamp: string): string => {
     return formatDateTime(messageDate, 'HH:mm');
   }
   
-  // 昨天显示"昨天 HH:mm"
+  // 昨天显示"昨天 HH:mm"或"Yesterday HH:mm"
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   if (
@@ -162,15 +293,84 @@ export const formatMessageTime = (timestamp: string): string => {
     messageDate.getMonth() === yesterday.getMonth() &&
     messageDate.getFullYear() === yesterday.getFullYear()
   ) {
-    return `昨天 ${formatDateTime(messageDate, 'HH:mm')}`;
+    return `${langText.yesterday} ${formatDateTime(messageDate, 'HH:mm')}`;
   }
   
-  // 一周内显示"周几 HH:mm"
+  // 一周内显示"周几 HH:mm"或"Sun HH:mm"
   if (diffMs < 7 * 24 * 60 * 60 * 1000) {
-    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-    return `周${weekdays[messageDate.getDay()]} ${formatDateTime(messageDate, 'HH:mm')}`;
+    const weekday = langText.weekdays[messageDate.getDay()];
+    return language === LanguageType.ZH
+      ? `${langText.weekPrefix}${weekday} ${formatDateTime(messageDate, 'HH:mm')}`
+      : `${weekday} ${formatDateTime(messageDate, 'HH:mm')}`;
   }
   
   // 其他情况显示完整日期时间
   return formatDateTime(messageDate, 'YYYY-MM-DD HH:mm');
+};
+
+/**
+ * 获取消息的时间戳
+ * @param message 消息对象
+ * @returns ISO格式的时间戳
+ */
+export const getMessageTimestamp = (message: Message): string => {
+  // 兼容同时使用timestamp和createdAt的情况
+  return message.timestamp || (message.createdAt as string) || new Date().toISOString();
+}
+
+/**
+ * 创建一个新的视频消息对象
+ * @param videoUrl 视频URL
+ * @param sender 发送者类型
+ * @param fileName 文件名
+ * @param fileSize 文件大小
+ * @param recipientId 接收者ID
+ * @returns 视频消息对象
+ */
+export const createVideoMessage = (
+  videoUrl: string,
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
+  fileName?: string,
+  fileSize?: number,
+  recipientId?: string
+): Message => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: generateMessageId(),
+    content: videoUrl,
+    type: MessageType.VIDEO,
+    sender,
+    fileName,
+    fileSize,
+    recipientId,
+    timestamp,
+    createdAt: timestamp
+  };
+};
+
+/**
+ * 创建一个新的位置消息对象
+ * @param locationData 位置数据，格式为 "latitude,longitude"
+ * @param sender 发送者类型
+ * @param locationName 位置名称
+ * @param recipientId 接收者ID
+ * @returns 位置消息对象
+ */
+export const createLocationMessage = (
+  locationData: string,
+  sender: SenderType | 'user' | 'agent' | 'customer' | 'system' | 'bot',
+  locationName?: string,
+  recipientId?: string
+): Message => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: generateMessageId(),
+    content: locationData,
+    type: MessageType.LOCATION,
+    sender,
+    fileName: locationName,
+    recipientId,
+    timestamp,
+    createdAt: timestamp
+  };
 };

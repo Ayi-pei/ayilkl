@@ -62,15 +62,15 @@ interface LinkInfo {
 
 // 扩展 Message 接口以支持系统消息
 interface ExtendedMessage extends Omit<Message, 'type' | 'sender'> {
-  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system';
-  sender: 'user' | 'agent' | 'customer' | 'system';
+  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system' | 'video' | 'location';
+  sender: 'user' | 'agent' | 'customer' | 'system' | 'bot';
 }
 
 interface UserFunctionProps {
   className?: string;
 }
 
-const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
+const UserFunction: React.FC<UserFunctionProps> = () => {
   const { 
     userSettings, 
     updateUserSettings,
@@ -85,7 +85,7 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
  const [showAgentInfoDrawer, setShowAgentInfoDrawer] = useState(false);
- const [tempNickname, setTempNickname] = useState(userSettings?.nickname || '');
+ const [tempNickname, setTempNickname] = useState(userSettings?.nickname ?? '');
  const [isLoading, setIsLoading] = useState(false);
  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
  const [hasShownLinkInfo, setHasShownLinkInfo] = useState(false);
@@ -151,7 +151,7 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
   };
   
   // 按回车键发送
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -295,7 +295,9 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
       case 'audio':
         return (
           <div className="message-audio">
-            <audio controls src={message.content}></audio>
+            <audio controls src={message.content}>
+              <track kind="captions" src="" label="中文字幕" />
+            </audio>
             <div className="file-name">{message.fileName}</div>
           </div>
         );
@@ -336,14 +338,14 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
       <div className="user-chat-header">
         <div className="user-profile">
           <Avatar 
-            src={currentAgent?.avatar || undefined}
+            src={currentAgent?.avatar ?? undefined}
             icon={!currentAgent?.avatar ? <UserOutlined /> : undefined}
             size={40}
             className="user-profile-avatar"
             onClick={() => setShowAgentInfoDrawer(true)}
           />
           <div>
-            <div className="agent-name">{currentAgent?.nickname || '客服'}</div>
+            <div className="agent-name">{currentAgent?.nickname ?? '客服'}</div>
             <div className="agent-hint">点击头像查看客服信息</div>
           </div>
         </div>
@@ -392,8 +394,8 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
                 <div className="message-content">
                   <div className={`message-sender ${msg.sender === 'user' ? 'message-sender-user' : 'message-sender-agent'}`}>
                     {msg.sender === 'user' 
-                      ? userSettings?.nickname || '我' 
-                      : currentAgent?.nickname || '客服'
+                      ? userSettings?.nickname ?? '我' 
+                      : currentAgent?.nickname ?? '客服'
                     }
                   </div>
                   <div className={`message-bubble ${msg.sender === 'user' ? 'message-bubble-user' : 'message-bubble-agent'}`}>
@@ -468,7 +470,7 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
         <div className="input-container">
           <TextArea
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="请输入消息..."
             rows={3}
@@ -507,7 +509,7 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
           >
             <div className="avatar-wrapper">
               <Avatar
-                src={userSettings?.avatar || undefined}
+                src={userSettings?.avatar ?? undefined}
                 icon={!userSettings?.avatar ? <UserOutlined /> : undefined}
                 size={100}
               />
@@ -523,7 +525,7 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
           <div className="settings-label">昵称</div>
           <Input
             value={tempNickname}
-            onChange={(e) => setTempNickname(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTempNickname(e.target.value)}
             placeholder="请输入昵称"
             suffix={<InfoCircleOutlined className="input-icon" />}
             aria-label="昵称输入框"
@@ -556,12 +558,12 @@ const UserFunction: React.FC<UserFunctionProps> = ({ className }) => {
       >
         <div className="agent-info-container">
           <Avatar
-            src={currentAgent?.avatar || undefined}
+            src={currentAgent?.avatar ?? undefined}
             icon={!currentAgent?.avatar ? <UserOutlined /> : undefined}
             size={100}
           />
           <div className="agent-info-name">
-            {currentAgent?.nickname || '客服'}
+            {currentAgent?.nickname ?? '客服'}
           </div>
           {linkInfo && linkInfo.link && (
             <div className="link-info">
