@@ -5,10 +5,7 @@ import { supabase } from './supabase';
 import { KeyManager } from './keyManager';
 import { v4 as uuidv4 } from 'uuid';
 
-// 扩展原有的KeyVerificationResult接口，添加linkId属性
-interface ExtendedKeyVerificationResult extends BaseKeyVerificationResult {
-  linkId?: string; // 添加这个属性，用于存储客服可分享给客户的短链接ID
-}
+// 使用原有的KeyVerificationResult接口，它已经包含了linkId属性
 
 /**
  * 密钥服务 - 负责密钥的生成、验证和管理
@@ -19,11 +16,12 @@ export class KeyService {
    * @param key 密钥
    * @returns 验证结果
    */
-  static async verifyKey(key: string): Promise<ExtendedKeyVerificationResult> {
+  static async verifyKey(key: string): Promise<BaseKeyVerificationResult> {
     try {
       // 检查是否管理员密钥
       const adminKey = import.meta.env.VITE_ADMIN_KEY;
-      if (key === adminKey) {
+      // 只有当环境变量中有配置管理员密钥时才进行比较
+      if (adminKey && key === adminKey) {
         return { valid: true, isAdmin: true };
       }
       
@@ -47,12 +45,10 @@ export class KeyService {
       
       // 处理status字段
       let validStatus: 'online' | 'away' | 'busy' = 'online';
-      if (data.agents && data.agents.status) {
-        if (data.agents.status === 'online' || 
-            data.agents.status === 'away' || 
-            data.agents.status === 'busy') {
-          validStatus = data.agents.status as 'online' | 'away' | 'busy';
-        }
+      if (data.agents?.status === 'online' ||
+        data.agents?.status === 'away' ||
+        data.agents?.status === 'busy') {
+        validStatus = data.agents.status as 'online' | 'away' | 'busy';
       }
       
       // 验证成功后，将密钥注册到KeyManager

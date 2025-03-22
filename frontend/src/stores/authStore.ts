@@ -2,8 +2,7 @@
 import { create } from 'zustand';
 import { KeyService } from '../services/keyService';
 import { KeyManager } from '../services/keyManager';
-import { KeyScope, KeyPurpose, type AgentData, UserType } from '@/types/index';
-import { Agent } from '../api/types';
+import { type AgentData, UserType } from '@/types/index';
 
 // 定义认证状态接口
 // 更新 AuthState 接口
@@ -48,11 +47,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!result.valid) {
         set({ 
           isLoading: false, 
-          error: result.message || '无效的密钥' 
+          error: result.message ?? '无效的密钥' 
         });
         return { 
           success: false, 
-          message: result.message || '无效的密钥' 
+          message: result.message ?? '无效的密钥' 
         };
       }
       
@@ -166,7 +165,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { userType, agentData } = get();
     
     if (userType === 'agent' || userType === 'admin') {
-      return agentData?.id || localStorage.getItem('agent_id');
+      return agentData?.id ?? localStorage.getItem('agent_id');
     }
     
     return null;
@@ -177,7 +176,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { userType, agentData } = get();
     
     if (userType === 'user') {
-      return localStorage.getItem('user_id') || agentData?.id;
+      return localStorage.getItem('user_id') ?? agentData?.id ?? null;
     }
     
     return null;
@@ -186,7 +185,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // 更新客服数据
   updateAgentData: (data: Partial<AgentData>) => {
     set(state => ({
-      agentData: state.agentData ? { ...state.agentData, ...data } : data
+      agentData: state.agentData ? { ...state.agentData, ...data } : (data as AgentData)
     }));
   }
 }));

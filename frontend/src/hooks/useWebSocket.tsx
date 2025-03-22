@@ -89,12 +89,13 @@ export const useWebSocket = () => {
           if (data.message) {
             addMessage({
               id: data.message.id || nanoid(),
-              content: data.message.content,
-              type: data.message.type || 'text',
-              sender: userType === 'agent' ? 'user' : 'agent',
+              content: data.message.content || '',
+              type: (data.message.type || 'text') as 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system' | 'video' | 'location',
+              sender: (userType === 'agent' ? 'user' : 'agent') as 'user' | 'agent' | 'customer' | 'system' | 'bot',
               fileName: data.message.fileName,
               fileSize: data.message.fileSize,
-              timestamp: data.message.timestamp || new Date().toISOString()
+              timestamp: data.message.timestamp || new Date().toISOString(),
+              createdAt: data.message.createdAt || new Date().toISOString()
             });
             
             // 播放消息提示音

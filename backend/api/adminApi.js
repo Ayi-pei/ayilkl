@@ -20,7 +20,8 @@ const verifyAdmin = (req, res, next) => {
   // 如果没有令牌，检查是否使用旧的x-admin-key头
   if (!token) {
     const adminKey = req.headers['x-admin-key'];
-    if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+    const envAdminKey = process.env.ADMIN_KEY;
+    if (!adminKey || !envAdminKey || adminKey !== envAdminKey) {
       return res.status(401).json({ error: '未授权访问，缺少令牌' });
     }
     // 如果使用旧的方式验证成功
@@ -105,7 +106,7 @@ router.post('/agents/:agentId/keys', verifyAdmin, async (req, res) => {
       .eq('is_active', true);
     
     // 创建新密钥
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('agent_keys')
       .insert({
         id: uuidv4(),
@@ -188,7 +189,7 @@ router.post('/login', async (req, res) => {
     const { adminKey } = req.body;
     
     // 验证管理员密钥是否正确
-    if (adminKey !== process.env.ADMIN_KEY && adminKey !== 'adminayi888') {
+    if (adminKey !== process.env.ADMIN_KEY) {
       return res.status(401).json({ message: '管理员密钥无效' });
     }
     

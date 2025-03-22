@@ -39,9 +39,9 @@ interface AgentFunctionProps {
 const { Option } = Select;
 const { TextArea } = Input;
 
-const AgentFunction = ({ className }: AgentFunctionProps) => {
-  const { theme } = useUserStore();
-  const currentTheme = getCurrentTheme();
+const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
+  const { theme: _theme } = useUserStore();
+  // 移除未使用的变量
   const {
     customers,
     selectedCustomer,
@@ -75,8 +75,8 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
   const [showAgentProfileModal, setShowAgentProfileModal] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState<'user_info' | 'quick_reply' | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [tempNickname, setTempNickname] = useState(agentData?.nickname || '');
-  const [tempStatus, setTempStatus] = useState(agentData?.status || 'online');
+  const [tempNickname, setTempNickname] = useState(agentData?.nickname ?? '');
+  const [tempStatus, setTempStatus] = useState(agentData?.status ?? 'online');
   const [shareLink, setShareLink] = useState('');
   const [currentLinkId, setCurrentLinkId] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -173,7 +173,7 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
 
     fetchLicenseInfo();
   }, []);
-  const handleUpdateLicense = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleUpdateLicense = async () => {
     if (!newLicenseKey.trim()) {
       toast.error('请输入有效的卡密');
       return;
@@ -182,7 +182,6 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
     try {
       setIsLoading(true);
       // 这里应该调用更新卡密的API
-      // const response = await KeyService.updateKey(newLicenseKey);
       
       // 模拟成功响应
       setTimeout(() => {
@@ -245,6 +244,8 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
     setShowRightPanel(null);
   };
 
+  // 注释掉未使用的函数
+  /*
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Handle file upload
   };
@@ -256,6 +257,7 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Handle image upload
   };
+  */
 
   const handleZipUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Handle zip upload
@@ -491,7 +493,7 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
           </div>
           {lastMessage && (
             <div className="last-message">
-              {lastMessage.type === 'text' ? lastMessage.content : '[媒体消息]'}
+              {lastMessage.type === 'text' ? lastMessage.content as React.ReactNode : '[媒体消息]'}
             </div>
           )}
         </div>
@@ -531,13 +533,13 @@ const AgentFunction = ({ className }: AgentFunctionProps) => {
           
           {message.type === 'image' && (
             <div className="image-message">
-              <img src={message.content as string} alt="图片消息" />
+              <img src={typeof message.content === 'string' ? message.content : ''} alt="图片消息" />
             </div>
           )}
           
           {message.type === 'file' && (
             <div className="file-message">
-              <FileOutlined /> {message.content}
+              <FileOutlined /> {message.content as React.ReactNode}
             </div>
           )}
           
@@ -631,7 +633,7 @@ const renderRightPanel = () => {
                 <Form.Item label="标题" required>
                   <Input 
                     value={newQuickReply.title} 
-                    onChange={e => setNewQuickReply({...newQuickReply, title: e.target.value})}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuickReply({...newQuickReply, title: e.target.value})}
                     placeholder="输入快速回复标题"
                     required
                   />
@@ -640,7 +642,7 @@ const renderRightPanel = () => {
                   <TextArea 
                     rows={4} 
                     value={newQuickReply.content} 
-                    onChange={e => setNewQuickReply({...newQuickReply, content: e.target.value})}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewQuickReply({...newQuickReply, content: e.target.value})}
                     placeholder="输入快速回复内容"
                     required
                   />
@@ -895,7 +897,7 @@ const renderRightPanel = () => {
               
               <TextArea
                 value={inputMessage}
-                onChange={e => setInputMessage(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="输入消息..."
                 autoSize={{ minRows: 1, maxRows: 4 }}
@@ -943,7 +945,7 @@ const renderRightPanel = () => {
                   <Form.Item label="客服昵称">
                     <Input 
                       value={tempNickname} 
-                      onChange={e => setTempNickname(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTempNickname(e.target.value)}
                       placeholder="输入昵称"
                     />
                   </Form.Item>
@@ -974,7 +976,7 @@ const renderRightPanel = () => {
                       // 修复：使用数组的第一个元素作为文本框的值
                       value={newWelcomeMessages[0] || ''}
                       // 修复：更新数组的第一个元素
-                      onChange={e => setNewWelcomeMessages([e.target.value])}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewWelcomeMessages([e.target.value])}
                       placeholder="输入欢迎语"
                     />
                   </Form.Item>
@@ -1037,7 +1039,7 @@ const renderRightPanel = () => {
                     <Input.Password 
                       placeholder="输入新卡密" 
                       value={newLicenseKey}
-                      onChange={e => setNewLicenseKey(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewLicenseKey(e.target.value)}
                     />
                   </Form.Item>
                   <Form.Item>
@@ -1169,7 +1171,7 @@ const renderRightPanel = () => {
           <Form.Item label="昵称">
             <Input
               value={tempNickname}
-              onChange={e => setTempNickname(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTempNickname(e.target.value)}
               placeholder="输入昵称"
             />
           </Form.Item>

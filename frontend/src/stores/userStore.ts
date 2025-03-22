@@ -20,6 +20,7 @@ interface UserState {
   updateAvatar: (avatarUrl: string) => void;
   updateNickname: (nickname: string) => void;
   toggleTheme: () => void;
+  setTheme: (theme: 'light' | 'dark') => void;
   toggleSound: () => void;
   clearUserData: () => void;
   setError: (error: string | null) => void;
@@ -30,7 +31,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   userSettings: null,
   isLoading: false,
   error: null,
-  theme: (localStorage.getItem('theme') as 'light' | 'dark') || 'light',
+  theme: (localStorage.getItem('theme') as 'light' | 'dark') ?? 'light',
   soundEnabled: localStorage.getItem('sound_enabled') !== 'false',
   
   // 加载用户设置
@@ -56,18 +57,18 @@ export const useUserStore = create<UserState>((set, get) => ({
         nickname: data.nickname,
         avatar: data.avatar,
         soundEnabled: data.sound_enabled !== false,
-        theme: data.theme || 'light'
+        theme: data.theme ?? 'light'
       };
       
       set({ 
         userSettings,
         isLoading: false,
-        theme: userSettings.theme || 'light',
+        theme: userSettings.theme ?? 'light',
         soundEnabled: userSettings.soundEnabled !== false
       });
       
       // 保存到本地存储
-      localStorage.setItem('theme', userSettings.theme || 'light');
+      localStorage.setItem('theme', userSettings.theme ?? 'light');
       localStorage.setItem('sound_enabled', String(userSettings.soundEnabled !== false));
       
       return userSettings;

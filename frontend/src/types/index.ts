@@ -85,7 +85,7 @@ export const NANOID_PREFIX = {
 // 生成带前缀的nanoid的辅助函数
 // 注意：此函数已移至utils/idUtils.ts，这里保留接口兼容性
 import { nanoid } from 'nanoid';
-export const generatePrefixedId = (prefix: string, length = 10): string => {
+export const generatePrefixedId = (prefix: string, length: number = 10): string => {
   return `${prefix}${nanoid(length)}`;
 };
 
@@ -97,7 +97,7 @@ export interface AgentData {
   id: string;
   nickname: string;
   avatar?: string;
-  status: 'online' | 'offline' | 'away';
+  status: 'online' | 'offline' | 'away' | 'busy';
   lastSeen?: string;
   settings?: {
     theme: 'light' | 'dark';
@@ -161,6 +161,7 @@ export interface WebSocketMessageBase {
 
 // 具体 WebSocket 消息类型
 export interface WebSocketMessage extends WebSocketMessageBase {
+  // 使用字符串字面量联合类型避免类型覆盖问题
   type: 
     | 'auth' 
     | 'message'
@@ -173,7 +174,7 @@ export interface WebSocketMessage extends WebSocketMessageBase {
     | 'pong'
     | 'error'
     | 'customers_list'
-    | string;  // 兼容其他可能的类型
+  | (string & {});  // 使用交集类型允许其他字符串，但不会覆盖字面量类型
 }
 
 // WebSocket 消息数据类型
@@ -206,7 +207,7 @@ export interface MessageData {
 
 export interface AgentStatusData {
   agentId: string;
-  status: 'online' | 'away' | 'busy' | string;
+  status: 'online' | 'away' | 'busy' | (string & {});  // 使用交集类型允许其他字符串，但不会覆盖字面量类型
 }
 
 export interface PingPongData {

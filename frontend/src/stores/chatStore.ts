@@ -4,9 +4,8 @@ import create from 'zustand';
 import { toast } from '../components/common/Toast';
 import { LinkService } from '../services/linkService';
 import { supabase } from '../services/supabase';
-import { BlacklistedUser, Customer, Message, QuickReply, Stats } from '../types';
+import { BlacklistedUser, Customer, Message, QuickReply, Stats, AgentData } from '../types';
 import { useAuthStore } from './authStore';
-import { AgentData } from '../types';
 
 interface ChatState {
   // 基础状态
@@ -107,11 +106,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const linkResult = await LinkService.verifyLink(linkId);
       
       if (!linkResult.valid) {
-        throw new Error(linkResult.message || '无效的聊天链接');
+        throw new Error(linkResult.message ?? '无效的聊天链接');
       }
       
       // 使用 linkResult.agentId 或 linkResult.agent.id
-      const agentId = linkResult.agentId || linkResult.agent.id;
+      const agentId = linkResult.agentId ?? linkResult.agent.id;
       
       if (!agentId) {
         throw new Error('链接中未包含客服ID');
@@ -196,6 +195,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 创建完整的消息对象
     const fullMessage: Message = {
       ...message,
+      id: message.id as string,
+      content: message.content as string,
+      type: message.type as 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system' | 'video' | 'location',
+      sender: message.sender as 'user' | 'agent' | 'customer' | 'system' | 'bot',
       timestamp: new Date().toISOString()
     };
     

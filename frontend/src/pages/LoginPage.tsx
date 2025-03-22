@@ -35,7 +35,11 @@ const LoginPage: React.FC = () => {
   }, [isAuthenticated, userType, navigate, location]);
   
   // 处理表单提交
-  const handleSubmit = async (values: { key: string }) => {
+  interface LoginFormValues {
+    key: string;
+  }
+  
+  const handleSubmit = async (values: LoginFormValues) => {
     clearError(); // 清除之前的错误
     
     try {
@@ -53,11 +57,11 @@ const LoginPage: React.FC = () => {
           navigate('/chat');
         }
       } else {
-        toast.error(result.message || '无效的卡密');
+        toast.error(result.message ?? '无效的卡密');
         form.setFields([
           {
             name: 'key',
-            errors: [result.message || '无效的卡密']
+            errors: [result.message ?? '无效的卡密']
           }
         ]);
       }
@@ -81,7 +85,7 @@ const LoginPage: React.FC = () => {
             <Paragraph>
               <Title level={4}>如何使用此系统</Title>
               <ul>
-                <li><strong>管理员</strong>：使用特定卡密 adminayi888 登录，可以管理客服和密钥</li>
+                <li><strong>管理员</strong>：使用管理员专用卡密登录，可以管理客服和密钥</li>
                 <li><strong>客服</strong>：使用管理员提供的卡密登录，可以与用户聊天</li>
                 <li><strong>用户</strong>：通过客服分享的链接或扫描二维码直接访问</li>
               </ul>

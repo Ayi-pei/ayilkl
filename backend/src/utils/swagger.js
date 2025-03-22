@@ -1,6 +1,7 @@
 // src/utils/swagger.js
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
+// 由于依赖问题，暂时注释掉swagger相关代码
+// const swaggerJsdoc = require('swagger-jsdoc');
+// const swaggerUi = require('swagger-ui-express');
 
 const options = {
   definition: {
@@ -40,9 +41,8 @@ const options = {
   ], // 路由文件路径
 };
 
-const specs = swaggerJsdoc(options);
-
+// 由于依赖问题，暂时提供空的导出
 module.exports = {
-  serve: swaggerUi.serve,
-  setup: swaggerUi.setup(specs),
+  serve: [],
+  setup: (req, res, next) => next(),
 };

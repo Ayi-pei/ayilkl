@@ -18,26 +18,44 @@ export class AdminService {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
       // 调用服务端API进行管理员身份验证
+      const adminKey = import.meta.env.VITE_ADMIN_KEY;
+      if (!adminKey) {
+        console.error('管理员密钥未配置，请检查.env文件');
+        toast.error('管理员密钥未配置，请联系系统管理员');
+        return false;
+      }
+      // 不要在日志中输出敏感信息
+      console.log('正在进行管理员验证...');
+
       const response = await fetch(`${apiUrl}/api/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          adminKey: import.meta.env.VITE_ADMIN_KEY || 'adminayi888'
-        }),
-        credentials: 'include'  // 包含cookie
+          adminKey
+        })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '管理员验证失败');
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || '管理员验证失败');
+        } catch (jsonError) {
+          // 如果响应不是JSON格式，直接使用状态文本
+          throw new Error(`管理员验证失败: ${response.statusText}`);
+        }
       }
 
-      const { token } = await response.json();
+      // 克隆响应以便可以多次读取body
+      const responseData = await response.json();
+
+      if (!responseData.token) {
+        throw new Error('服务器响应中缺少token');
+      }
       
       // 保存token到localStorage
-      localStorage.setItem('admin_token', token);
+      localStorage.setItem('admin_token', responseData.token);
       console.log('管理员登录成功');
       return true;
     } catch (error) {
