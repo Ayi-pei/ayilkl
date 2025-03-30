@@ -1,4 +1,3 @@
-// src/pages/AdminPage.tsx
 import {
   CopyOutlined,
   DashboardOutlined,
@@ -32,16 +31,14 @@ import {
   Typography,
   message,
 } from 'antd';
-import { nanoid } from 'nanoid';
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from '../components/common/Toast';
 import { AdminService } from '../services/adminService';
 import { KeyService } from '../services/keyService';
-import { supabase } from '../services/supabase';
 import { useAuthStore } from '../stores/authStore';
 import '../styles/admin.css';
 import { testSupabaseConnection } from '../utils/testSupabase';
+import { Agent as AgentModel, AgentKey as AgentKeyModel, Stats as StatsModel } from '../models/databaseModels';
 
 const { Header, Content, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -73,11 +70,35 @@ interface Stats {
   totalCustomers: number;
   totalAgents: number;
   totalMessages: number;
-  todayMessages: number;
+  todayMessages: number;  // 添加这个属性
 }
 
+// 添加辅助函数处理状态显示
+const getStatusTag = (status: string) => {
+  if (status === 'online') return { color: 'green', text: '在线' };
+  if (status === 'away') return { color: 'orange', text: '离开' };
+  return { color: 'red', text: '忙碌' };
+};
+
+// 添加辅助函数处理剩余天数显示
+const getRemainingDaysTag = (days: number) => {
+  if (days > 7) return { color: 'green', text: `${days}天` };
+  if (days > 0) return { color: 'orange', text: `${days}天` };
+  return { color: 'red', text: '已过期' };
+};
+
+// 当使用 Agent 对象时，可为缺失字段赋默认值
+// processAgent function removed because it was never used.
+
+// 修改 processAgentKey 参数类型为 AgentKeyModel，并确保 agentId 有默认值
+const processAgentKey = (agentKey: AgentKeyModel): AgentKeyModel => ({
+  ...agentKey,
+  agentId: agentKey.agentId ?? ''  // 默认赋值空字符串，或根据业务需求调整默认值
+});
+
+// 示例：当获取所有客服后，对每个客服进行默认处理
+
 const AdminPage: React.FC = () => {
-  const navigate = useNavigate();
   const { logout } = useAuthStore();
   const [newAgentForm] = Form.useForm();
   
@@ -125,10 +146,11 @@ const AdminPage: React.FC = () => {
       
       // 获取每个客服的有效密钥
       const agentsWithKeys = await Promise.all(
-        agentsData.map(async agent => {
+        agentsData.map(async (agent: AgentModel) => {
           // 获取客服的密钥数据
           const keyData = await AdminService.getAgentKeys(agent.id);
-          const activeKeys = keyData.filter(k => k.is_active);
+          const processedKeys = keyData.map(processAgentKey);
+          const activeKeys = processedKeys.filter(k => k.isActive);
           
           return {
             id: agent.id,
@@ -136,7 +158,7 @@ const AdminPage: React.FC = () => {
             avatar: agent.avatar,
             status: agent.status,
             key: activeKeys.length > 0 ? activeKeys[0].key : null,
-            expiryTime: activeKeys.length > 0 ? activeKeys[0].expires_at : null
+            expiryTime: activeKeys.length > 0 ? activeKeys[0].expiresAt : null
           };
         })
       );
@@ -178,7 +200,12 @@ const AdminPage: React.FC = () => {
     
     try {
       const statsData = await AdminService.getSystemStats();
-      setStats(statsData);
+      setStats({
+        totalCustomers: statsData.customersCount,
+        totalAgents: statsData.agentsCount,
+        totalMessages: statsData.messagesCount,
+        todayMessages: (statsData as any).todayMessages || 0
+      });
     } catch (error) {
       console.error('获取统计数据失败:', error);
       toast.error('获取统计数据失败');
@@ -375,7 +402,7 @@ const AdminPage: React.FC = () => {
       render: (text: string, record: Agent) => (
         <div className="agent-row">
           <img 
-            src={record.avatar || '/default-avatar.png'} 
+            src={record.avatar ?? '/default-avatar.png'} 
             alt="头像"
             className="agent-avatar-small"
           />
@@ -387,17 +414,10 @@ const AdminPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={
-          status === 'online' ? 'green' : 
-          status === 'away' ? 'orange' : 
-          'red'
-        }>
-          {status === 'online' ? '在线' : 
-           status === 'away' ? '离开' : 
-           '忙碌'}
-        </Tag>
-      ),
+      render: (status: string) => {
+        const { color, text } = getStatusTag(status);
+        return <Tag color={color}>{text}</Tag>;
+      },
     },
     {
       title: '当前密钥',
@@ -405,7 +425,7 @@ const AdminPage: React.FC = () => {
       dataIndex: 'key',
       render: (text: string | null) => (
         <div className="key-container">
-          <span className="key-text">{text || '无密钥'}</span>
+          <span className="key-text">{text ?? '无密钥'}</span>
           {text && (
             <Button 
               type="text" 
@@ -497,15 +517,10 @@ const AdminPage: React.FC = () => {
       title: '剩余天数',
       dataIndex: 'remainingDays',
       key: 'remainingDays',
-      render: (days: number) => (
-        <Tag color={
-          days > 7 ? 'green' :
-          days > 0 ? 'orange' :
-          'red'
-        }>
-          {days > 0 ? `${days}天` : '已过期'}
-        </Tag>
-      ),
+      render: (days: number) => {
+        const { color, text } = getRemainingDaysTag(days);
+        return <Tag color={color}>{text}</Tag>;
+      },
     },
     {
       title: '操作',
@@ -630,7 +645,7 @@ const AdminPage: React.FC = () => {
                   render: (text, record) => (
                     <div className="agent-row">
                       <img 
-                        src={record.avatar || '/default-avatar.png'} 
+                        src={record.avatar ?? '/default-avatar.png'} 
                         alt="头像"
                         className="agent-avatar-small"
                       />
@@ -641,17 +656,10 @@ const AdminPage: React.FC = () => {
                 {
                   title: '状态',
                   dataIndex: 'status',
-                  render: (status) => (
-                    <Tag color={
-                      status === 'online' ? 'green' : 
-                      status === 'away' ? 'orange' : 
-                      'red'
-                    }>
-                      {status === 'online' ? '在线' : 
-                      status === 'away' ? '离开' : 
-                      '忙碌'}
-                    </Tag>
-                  )
+                  render: (status) => {
+                    const { color, text } = getStatusTag(status);
+                    return <Tag color={color}>{text}</Tag>;
+                  }
                 }
               ]}
             />
@@ -686,9 +694,10 @@ const AdminPage: React.FC = () => {
                 {
                   title: '剩余天数',
                   dataIndex: 'remainingDays',
-                  render: (days) => (
-                    <Tag color="orange">{days}天</Tag>
-                  )
+                  render: (days) => {
+                    const { color, text } = getRemainingDaysTag(days);
+                    return <Tag color={color}>{text}</Tag>;
+                  }
                 }
               ]}
             />
@@ -875,7 +884,7 @@ const AdminPage: React.FC = () => {
               min={1}
               max={365}
               value={keyExpiryDays}
-              onChange={val => setKeyExpiryDays(val || 30)}
+              onChange={val => setKeyExpiryDays(val ?? 30)}
               style={{ width: '100%' }}
             />
           </Form.Item>
@@ -945,5 +954,41 @@ const AdminPage: React.FC = () => {
     </Layout>
   );
 };
+
+// 示例：调用 getAllAgents，因类型提示问题，可临时使用类型断言
+(AdminService as any).getAllAgents().then((agents: AgentModel[]) => {
+  agents.forEach((agent: AgentModel) => {
+    console.log(agent);
+  });
+});
+
+// 示例：调用 getAgentKeys
+(AdminService as any).getAgentKeys('some-agent-id').then((keys: AgentKeyModel[]) => {
+  keys.forEach((key: AgentKeyModel) => {
+    console.log(key);
+  });
+});
+
+// 示例：调用 getSystemStats
+(AdminService as any).getSystemStats().then((stats: StatsModel) => {
+  console.log('统计数据:', stats);
+});
+
+// 示例：调用 createAgent，返回 string | null
+(AdminService as any).createAgent('测试昵称').then((agentId: string | null) => {
+  console.log('创建的客服ID:', agentId);
+});
+
+// 示例：调用 deleteAgent
+(AdminService as any).deleteAgent('some-agent-id').then((success: boolean) => {
+  console.log('删除结果:', success);
+});
+
+// 示例：调用 generateKeyForAgent
+(AdminService as any).generateKeyForAgent('some-agent-id').then((key: string | null) => {
+  console.log('生成的密钥:', key);
+});
+
+// 针对回调中隐式 any 的参数添加类型注解示例
 
 export default AdminPage;

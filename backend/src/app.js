@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 // 导入认证中间件
 const { authenticateShareLink } = require('./middlewares/auth');
 const { createTempUser } = require('./middlewares/user');
+const supabaseAdmin = require('./utils/supabaseAdminClient');
 
 // 初始化Express应用
 const app = express();
@@ -19,15 +20,16 @@ app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:5173'], 
   credentials: true, 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'x-api-key']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // 导入 Swagger 文档
 const swagger = require('./utils/swagger');
-// 添加 Swagger 文档
-app.use('/api-docs', swagger.serve, swagger.setup);
+// 修改 Swagger 文档配置方式
+app.use('/api-docs', swagger.serve);
+app.use('/api-docs', swagger.setup);
 
 // 用户通过短链接访问聊天页面
 app.get('/chat/:code', authenticateShareLink, createTempUser, (req, res) => {
@@ -44,6 +46,22 @@ app.get('/chat/:code', authenticateShareLink, createTempUser, (req, res) => {
   });
 });
 
+// 基础路由
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to AYI Backend API' });
+});
+
+// 测试数据库连接
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('your_table').select('*').limit(1);
+    if (error) throw error;
+    res.json({ status: 'success', data });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
 // 路由导入
 const apiRoutes = require('./routes/apiRoutes');
 const keysRoutes = require('./routes/keys');
@@ -54,7 +72,11 @@ app.use('/api', apiRoutes);
 app.use('/api/keys', keysRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/admin', adminApi); // 添加管理员API路由
+if (adminApi) {
+  app.use('/api/admin', adminApi); // 添加管理员API路由
+} else {
+  console.warn('adminApi router is undefined, skipping /api/admin route');
+}
 
 // 健康检查路由
 app.get('/health', (req, res) => {

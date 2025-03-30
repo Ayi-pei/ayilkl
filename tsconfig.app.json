@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    // 保留现有配置
     "forceConsistentCasingInFileNames": true,
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -15,7 +16,25 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    
+    // 新增路径别名配置
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./frontend/src/*"]
+    },
+    
+    // 增强类型安全性
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    
+    // 性能优化
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo",
+    
+    // 明确类型引用
+    "types": ["react", "react-dom", "vite/client"]
   },
-  "include": ["frontend/src","frontend/vite-env.d.ts"]
+  "include": ["frontend/src", "frontend/vite-env.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

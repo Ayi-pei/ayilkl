@@ -9,12 +9,6 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import '../styles/chatPage.css';
 import { toast } from '../components/common/Toast';
-import { 
-  COMPONENT_CLASS_PREFIX, 
-  isValidTodayKey,
-  LinkVerificationResult
-} from '../types/index';
-import { LinkService } from '../services/linkService';
 
 const ChatPage: React.FC = () => {
   const { linkId } = useParams<{ linkId: string }>();
@@ -23,7 +17,6 @@ const ChatPage: React.FC = () => {
     userType, 
     initializeChat,
     isInitializing,
-    setUserType
   } = useChatStore();
   
   const { isAuthenticated, agentData, login } = useAuthStore();
@@ -125,7 +118,7 @@ const ChatPage: React.FC = () => {
   }, [linkId, isAuthenticated, userType, agentData, initializeChat, connectWebSocket, navigate, login]);
 
   // 根据用户类型渲染不同的聊天界面
-  const chatPageClass = COMPONENT_CLASS_PREFIX.CHAT_PAGE;
+  const chatPageClass = { CHAT_PAGE: 'chat-page' };
 
   // 处理错误情况
   if (error) {

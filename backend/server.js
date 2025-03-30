@@ -4,15 +4,11 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const config = require('./config');
 
 // 初始化Express应用
 const app = express();
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3003', 'http://localhost:5173'], 
-  credentials: true, 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key']
-}));
+app.use(cors(config.server.cors));
 app.use(express.json());
 
 // 创建HTTP服务器
@@ -28,8 +24,11 @@ const io = new Server(server, {
 
 // 初始化Supabase客户端
 // 使用统一的配置，避免硬编码密钥
-const config = require('./src/config');
-const supabase = createClient(config.supabaseUrl, config.supabaseKey);
+const supabase = createClient(
+  config.supabase.url,
+  config.supabase.serviceKey,
+  { auth: config.supabase.options }
+);
 
 // 存储用户连接
 const connectedUsers = new Map();
@@ -269,16 +268,9 @@ app.post('/api/verify-key', async (req, res) => {
 });
 
 // 启动服务器
-// server.js
-require('dotenv').config();
-const { server: appServer
-} = require('./src/app');
-
-const PORT = config.port || 3001;
-
-appServer.listen(PORT, () => {
-  console.log(`服务器已启动，监听端口 ${PORT}`);
-  console.log(`环境: ${config.nodeEnv || 'development'}`);
+server.listen(config.server.port, () => {
+  console.log(`服务器运行在端口 ${config.server.port}`);
+  console.log(`环境: ${config.server.nodeEnv}`);
 });
 
 // 处理未捕获的异常

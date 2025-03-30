@@ -1,7 +1,5 @@
 import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminPage from './pages/AdminPage';
@@ -11,8 +9,21 @@ import NotFoundPage from './pages/NotFoundPage';
 import { useAuthStore } from './stores/authStore';
 import DebugPanel from './components/common/DebugPanel';
 
+// 辅助函数：提取嵌套三元表达式
+const getRedirectPath = (isAuthenticated: boolean, userType: string): string => {
+  if (!isAuthenticated) {
+    return "/login";
+  } else if (userType === 'admin') {
+    return "/admin";
+  }
+  return "/chat";
+};
+
 const App: React.FC = () => {
   const { isAuthenticated, userType } = useAuthStore();
+
+  // 使用辅助函数获取重定向路径
+  const redirectPath = getRedirectPath(isAuthenticated, userType);
 
   return (
     <Router>
@@ -37,16 +48,12 @@ const App: React.FC = () => {
           </ProtectedRoute>
         } />
         
-        <Route path="/" element={
-          !isAuthenticated ? <Navigate to="/login" /> :
-          userType === 'admin' ? <Navigate to="/admin" /> :
-          <Navigate to="/chat" />
-        } />
+        <Route path="/" element={<Navigate to={redirectPath} />} />
         
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       
-      <ToastContainer 
+      {/* <ToastContainer 
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -56,7 +63,7 @@ const App: React.FC = () => {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-      />
+      /> */}
       
       {/* 添加调试面板 */}
       <DebugPanel />

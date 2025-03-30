@@ -1,7 +1,7 @@
 {
   "sql.defaultDialect": "postgresql",
   "sql.format.keywordCase": "upper",
-  "sql.format.indentStyle": "standard",
+  "sql.format.indentStyle": "spaces",
   "sql.linter.enable": true,
   "[sql]": {
     "editor.formatOnSave": true,
@@ -22,5 +22,10 @@
     }
   ],
   "json.schemaDownload.enable": false,
-  "typescript.tsdk": "node_modules\\typescript\\lib"
+  "typescript.tsdk": "node_modules\\typescript\\lib",
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "editor.fontSize": 14,
+  "explorer.confirmDelete": false
 }

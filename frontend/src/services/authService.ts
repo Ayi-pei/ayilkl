@@ -108,7 +108,9 @@ export class AuthService {
             id,
             nickname,
             avatar,
-            status
+            status,
+            created_at,
+            name
           )
         `)
         .eq('key', key)
@@ -136,6 +138,7 @@ export class AuthService {
       // 检查是否是管理员密钥
       const isAdmin = data.is_admin === true;
       
+      localStorage.setItem('agentData', JSON.stringify(data.agents));
       return {
         valid: true,
         isAdmin,
@@ -144,7 +147,9 @@ export class AuthService {
           id: data.agents.id,
           nickname: data.agents.nickname,
           avatar: data.agents.avatar,
-          status: data.agents.status
+          status: data.agents.status,
+          createdAt: data.agents.created_at,
+          name: data.agents.name,
         },
         expiresAt: data.expires_at
       };

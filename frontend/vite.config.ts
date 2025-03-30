@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
     root: resolve(__dirname, './'),
     publicDir: resolve(__dirname, './public'),
     build: {
-      outDir: resolve(__dirname, '../dist'),
+      outDir: '../dist',
       emptyOutDir: true,
       // 增加块大小警告限制
       chunkSizeWarningLimit: 1000,

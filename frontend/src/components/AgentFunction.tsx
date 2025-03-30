@@ -22,7 +22,6 @@ import { Tabs, Select, Input, Modal, List, Avatar, Empty, Badge, Button, Divider
 import { nanoid } from 'nanoid';
 import { useState, useRef, useEffect } from 'react';
 import { useUserStore } from '../stores/userStore';
-import { getCurrentTheme } from '../utils/themeUtils';
 // 删除与antd Form冲突的导入
 // import type { Form } from 'react-router-dom';
 
@@ -101,10 +100,12 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
   const chatWindowRef = useRef<HTMLDivElement>(null);
   
   // 扩展 Customer 类型，添加 unreadCount、ipAddress 和 device 属性
-  interface ExtendedCustomer extends Omit<Customer, 'ipAddress' | 'device'> {
+  interface ExtendedCustomer extends Omit<Customer, 'device'> {
     unreadCount?: number;
     ipAddress?: string;
     device?: string;
+    isOnline: boolean;
+    firstVisit: string;
   }
   
   // 扩展 Message 类型，添加 customerId 和修改 sender 类型
@@ -112,6 +113,8 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
     customerId?: string;
     timestamp?: string | Date;
     read?: boolean;
+    type: Message['type'];
+    senderId: Message['sender'];
   }
   
   // 副作用
@@ -216,7 +219,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
         id: nanoid(),
         content: inputMessage,
         type: 'text', // 添加必要的类型
-        sender: 'agent',
+        senderId: 'agent',
         recipientId: selectedCustomer.id,
         // timestamp 会在 sendMessage 内部添加
       });
@@ -244,34 +247,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
     setShowRightPanel(null);
   };
 
-  // 注释掉未使用的函数
-  /*
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle file upload
-  };
 
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle audio upload
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle image upload
-  };
-  */
-
-  const handleZipUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle zip upload
-  };
-
-  const handleExeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle exe upload
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle input change
-  };
-  
-  // 处理添加新快速回复
   const handleAddQuickReply = () => {
     if (newQuickReply.title && newQuickReply.content) {
       addQuickReply(newQuickReply.title, newQuickReply.content);
@@ -342,7 +318,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
     try {
       setIsLoading(true);
       // 使用客服ID创建链接
-      const link = await LinkService.createLink(agentData?.id || '', 7); // 7天有效期
+      const link = await LinkService.createLink(agentData?.id ?? '', 7); // 7天有效期
       setShareLink(window.location.origin + '/chat/' + link.code);
       setCurrentLinkId(link.id);
       
@@ -431,7 +407,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
           <List
             dataSource={users}
             renderItem={(user: LinkUser) => (
-              <List.Item>
+              <List.Item key={user.id}>
                 <List.Item.Meta
                   avatar={<Avatar src={user.avatar} icon={<UserOutlined />} />}
                   title={user.nickname}
@@ -457,7 +433,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
   // 渲染聊天列表项 - 修复 online 改为 isOnline
   const renderCustomerItem = (customer: ExtendedCustomer) => {
     // 使用 ExtendedMessage 类型
-    const lastMessage = (messages as ExtendedMessage[])
+    const lastMessage = (messages as unknown as ExtendedMessage[])
       .filter(msg => msg.customerId === customer.id)
       .sort((a, b) => {
         // 使用可选链操作符来安全访问timestamp属性
@@ -467,15 +443,16 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
       })[0];
     
     // 计算未读消息数量
-    const unreadCount = (messages as ExtendedMessage[])
+    const unreadCount = ((messages as unknown) as ExtendedMessage[])
       .filter(msg => 
         msg.customerId === customer.id && 
-        msg.sender === 'customer' && 
+        msg.senderId === 'customer' && 
         !msg.read
       ).length;
       
     return (
       <List.Item
+        key={customer.id}
         className={`customer-item ${selectedCustomer?.id === customer.id ? 'selected' : ''}`}
         onClick={() => setSelectedCustomer(customer as Customer)}
       >
@@ -497,7 +474,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
             </div>
           )}
         </div>
-        {lastMessage && lastMessage.timestamp && (
+        {lastMessage?.timestamp && (
           <div className="message-time">
             {formatDistanceToNow(new Date(lastMessage.timestamp as string), { 
               addSuffix: true,
@@ -511,7 +488,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
   
   // 渲染消息
   const renderMessage = (message: ExtendedMessage) => {
-    const isAgent = message.sender === 'agent';
+    const isAgent = message.senderId === 'agent';
     
     return (
       <div 
@@ -528,7 +505,7 @@ const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
         
         <div className="message-content">
           {message.type === 'text' && (
-            <div className="text-message">{message.content}</div>
+            <div className="text-message">{message.content as string}</div>
           )}
           
           {message.type === 'image' && (
@@ -599,9 +576,9 @@ const renderRightPanel = () => {
                 <h4>{selectedCustomer.nickname}</h4>
                 <p>ID: {selectedCustomer.id}</p>
                 <p>状态: {selectedCustomer.isOnline ? '在线' : '离线'}</p>
-                <p>IP地址: {(selectedCustomer as ExtendedCustomer).ipAddress || '未知'}</p>
+                <p>IP地址: {(selectedCustomer as ExtendedCustomer).ipAddress ?? '未知'}</p>
                 <div className="device">
-                  {(selectedCustomer as ExtendedCustomer).device || '未知设备'}
+                  {(selectedCustomer as ExtendedCustomer).device ?? '未知设备'}
                 </div>
                 <p>首次访问: {new Date(selectedCustomer.firstVisit).toLocaleString()}</p>
                 <p>最后访问: {new Date(selectedCustomer.lastSeen).toLocaleString()}</p>
@@ -665,7 +642,7 @@ const renderRightPanel = () => {
               className="quick-reply-list"
               dataSource={quickReplies}
               renderItem={item => (
-                <List.Item className="quick-reply-item">
+                <List.Item key={item.id} className="quick-reply-item">
                   <Card 
                     title={item.title}
                     extra={
@@ -715,7 +692,7 @@ const renderRightPanel = () => {
             />
           </Badge>
           <div className="agent-info">
-            <span className="agent-name">{agentData?.nickname || '客服'}</span>
+            <span className="agent-name">{agentData?.nickname ?? '客服'}</span>
             <Tag color={tempStatus === 'online' ? 'green' : 'default'}>
               {tempStatus === 'online' ? '在线' : '离线'}
             </Tag>
@@ -818,9 +795,9 @@ const renderRightPanel = () => {
             </div>
             
             <div className="chat-messages" ref={chatWindowRef}>
-              {(messages as ExtendedMessage[])
+              {((messages as unknown) as ExtendedMessage[])
                 .filter(msg => msg.customerId === selectedCustomer.id)
-                .map(renderMessage)}
+                .map(msg => renderMessage(msg))}
               <div ref={messageEndRef} />
             </div>
             
@@ -974,7 +951,7 @@ const renderRightPanel = () => {
                     <TextArea
                       rows={4}
                       // 修复：使用数组的第一个元素作为文本框的值
-                      value={newWelcomeMessages[0] || ''}
+                      value={newWelcomeMessages[0] ?? ''}
                       // 修复：更新数组的第一个元素
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewWelcomeMessages([e.target.value])}
                       placeholder="输入欢迎语"
@@ -1079,6 +1056,7 @@ const renderRightPanel = () => {
             dataSource={shareLinks}
             renderItem={link => (
               <List.Item
+                key={link.id}
                 actions={[
                   <Tooltip title="查看统计" key="stats">
                     <Button 
@@ -1116,7 +1094,7 @@ const renderRightPanel = () => {
                     <div className="link-description">
                       <div>创建时间: {new Date(link.createdAt).toLocaleString()}</div>
                       <div>过期时间: {new Date(link.expiresAt).toLocaleString()}</div>
-                      <div>访问次数: {link.accessCount || 0}</div>
+                      <div>访问次数: {link.accessCount ?? 0}</div>
                     </div>
                   }
                 />

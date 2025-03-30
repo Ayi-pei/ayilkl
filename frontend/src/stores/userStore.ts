@@ -1,5 +1,5 @@
 // src/stores/userStore.ts
-import { create } from 'zustand';
+import create from 'zustand';
 import { supabase } from '../services/supabase';
 import { toast } from '../components/common/Toast';
 import { UserSettings } from '../types';
@@ -26,7 +26,10 @@ interface UserState {
   setError: (error: string | null) => void;
 }
 
-export const useUserStore = create<UserState>((set, get) => ({
+export const useUserStore = create<UserState>((
+	set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void,
+	get: () => UserState
+) => ({
   // 初始状态
   userSettings: null,
   isLoading: false,
@@ -74,9 +77,15 @@ export const useUserStore = create<UserState>((set, get) => ({
       return userSettings;
     } catch (error) {
       console.error('加载用户设置失败:', error);
+      const errMessage = error instanceof Error ? error.message : '加载用户设置失败';
+      if (errMessage.includes("Hostname/IP does not match certificate's altnames")) {
+        toast.error('请求出现证书错误，请检查服务器证书配置');
+      } else {
+        toast.error(errMessage);
+      }
       set({ 
         isLoading: false, 
-        error: error instanceof Error ? error.message : '加载用户设置失败' 
+        error: errMessage 
       });
       return null;
     }
@@ -102,7 +111,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ theme: settings.theme });
         localStorage.setItem('theme', settings.theme);
       }
-      if (settings.soundEnabled !== undefined) {
+      if (settings.soundEnabled !== undefined && settings.soundEnabled !== null) {
         updateData.sound_enabled = settings.soundEnabled;
         set({ soundEnabled: settings.soundEnabled });
         localStorage.setItem('sound_enabled', String(settings.soundEnabled));
@@ -127,14 +136,19 @@ export const useUserStore = create<UserState>((set, get) => ({
       return true;
     } catch (error) {
       console.error('更新用户设置失败:', error);
-      toast.error(error instanceof Error ? error.message : '更新用户设置失败');
+      const errMessage = error instanceof Error ? error.message : '更新用户设置失败';
+      if (errMessage.includes("Hostname/IP does not match certificate's altnames")) {
+        toast.error('请求出现证书错误，请检查服务器证书配置');
+      } else {
+        toast.error(errMessage);
+      }
       return false;
     }
   },
   
   // 更新头像
   updateAvatar: (avatarUrl: string) => {
-    set(state => ({
+    set((state: UserState) => ({
       userSettings: state.userSettings ? {
         ...state.userSettings,
         avatar: avatarUrl
@@ -144,7 +158,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   
   // 更新昵称
   updateNickname: (nickname: string) => {
-    set(state => ({
+    set((state: UserState) => ({
       userSettings: state.userSettings ? {
         ...state.userSettings,
         nickname

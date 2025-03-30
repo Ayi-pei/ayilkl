@@ -1,7 +1,8 @@
+/// <reference types="vite/client" />
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import { nanoid } from 'nanoid';
-import { WebSocketStatus, WebSocketMessage } from '../types';
+import { WebSocketStatus, WebSocketMessage, Message } from '../types';
 import { toast } from '../components/common/Toast';
 import { useAuthStore } from '../stores/authStore';
 
@@ -78,78 +79,78 @@ export const useWebSocket = () => {
     heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
   }, [sendHeartbeat]);
   
+  // 处理消息的辅助函数
+  const handleMessageData = (messageData: any): Message => {
+    return {
+      id: messageData.id || nanoid(),
+      content: messageData.content || '',
+      type: (messageData.type || 'text') as Message['type'],
+      sender: (userType === 'agent' ? 'user' : 'agent') as Message['sender'],
+      fileName: messageData.fileName,
+      fileSize: messageData.fileSize,
+      timestamp: messageData.timestamp || new Date().toISOString(),
+      createdAt: messageData.createdAt || new Date().toISOString()
+    };
+  };
+
   // 处理WebSocket消息
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
+    let data: WebSocketMessage;
     try {
-      const data: WebSocketMessage = JSON.parse(event.data);
-      console.log('收到WebSocket消息:', data);
-      
-      switch(data.type) {
-        case 'message':
-          if (data.message) {
-            addMessage({
-              id: data.message.id || nanoid(),
-              content: data.message.content || '',
-              type: (data.message.type || 'text') as 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system' | 'video' | 'location',
-              sender: (userType === 'agent' ? 'user' : 'agent') as 'user' | 'agent' | 'customer' | 'system' | 'bot',
-              fileName: data.message.fileName,
-              fileSize: data.message.fileSize,
-              timestamp: data.message.timestamp || new Date().toISOString(),
-              createdAt: data.message.createdAt || new Date().toISOString()
-            });
-            
-            // 播放消息提示音
-            if (userType === 'agent') {
-              const audio = new Audio('/notification.mp3');
-              audio.play().catch(e => console.log('无法播放提示音:', e));
-            }
-          }
-          break;
-          
-        case 'customer_online':
-        case 'customer_offline':
-          if (data.customerId && userType === 'agent') {
-            handleCustomerStatusChange(
-              data.customerId,
-              data.type === 'customer_online',
-              data.timestamp
-            );
-          }
-          break;
-          
-        case 'agent_status':
-          if (data.agentId && data.status && userType === 'user') {
-            // 暂未实现用户端客服状态更新逻辑
-          }
-          break;
-          
-        case 'pong':
-          console.log('收到心跳响应');
-          break;
-          
-        case 'error':
-          console.error('WebSocket错误:', data.error);
-          toast.error(data.error || '连接错误');
-          break;
-          
-        // 修复：移除奇怪的 async function 并修复 customers_list 处理
-        case 'customers_list':
-          if ('customersList' in data && userType === 'agent') {
-            // 修复：确保 customersList 不为 undefined
-            setCustomers(Array.isArray(data.customersList) ? data.customersList : []);
-          }
-          break;
-          
-        default:
-          console.warn('未知的WebSocket消息类型:', data.type);
-      }
+      data = JSON.parse(event.data);
     } catch (e) {
       console.error('处理WebSocket消息失败:', e);
+      return;
+    }
+    console.log('收到WebSocket消息:', data);
+    
+    switch (data.type) {
+      case 'message':
+        if (data.message) {
+          const message = handleMessageData(data.message);
+          addMessage(message);
+          // 播放消息提示音
+          if (userType === 'agent') {
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(e => console.log('无法播放提示音:', e));
+          }
+        }
+        break;
+      case 'customer_online':
+      case 'customer_offline':
+        if (data.customerId && userType === 'agent') {
+          handleCustomerStatusChange(
+            data.customerId,
+            data.type === 'customer_online',
+            data.timestamp ?? undefined
+          );
+        }
+        break;
+      case 'agent_status':
+        if (data.agentId && data.status && userType === 'user') {
+          // 暂未实现用户端客服状态更新逻辑
+        }
+        break;
+      case 'pong':
+        console.log('收到心跳响应');
+        break;
+      case 'error':
+        console.error('WebSocket错误:', data.error);
+        toast.error(data.error || '连接错误');
+        break;
+      case 'customers_list':
+        if (data.customersList && userType === 'agent') {
+          setCustomers(Array.isArray(data.customersList) ? data.customersList : []);
+        }
+        break;
+      default:
+        console.warn('未知的WebSocket消息类型:', data.type);
+        break;
     }
   }, [
-    addMessage, 
-    userType, 
-    handleCustomerStatusChange, 
+    addMessage,
+    userType,
+    handleCustomerStatusChange,
     setCustomers
   ]);
   

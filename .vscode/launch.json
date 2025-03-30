@@ -1,0 +1,19 @@
+{
+	// ...existing code...
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch Node Program",
+			"console": "integratedTerminal"
+			// ...existing code...
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach Program",
+			"port": 9229
+		}
+	]
+	// ...existing code...
+}

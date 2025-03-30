@@ -37,10 +37,12 @@
     color: #999;
   }
 
+  /* 合并重复的 .share-link-info 选择器 */
   .share-link-info {
     margin-top: 24px;
     border-top: 1px solid #f0f0f0;
     padding-top: 16px;
+    width: 100%;
   }
 
   .privacy-info {
@@ -58,10 +60,6 @@
 
   .share-link-qrcode {
     text-align: center;
-  }
-
-  .share-link-info {
-    width: 100%;
   }
 
   .share-link-text {

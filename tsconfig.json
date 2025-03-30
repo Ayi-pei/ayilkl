@@ -1,29 +1,52 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    // 基础配置
+    "target": "ES2022",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "./frontend/src/*"
-      ]
-    },
+    
+    // 类型安全
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    
+    // 模块和解析
+    "allowJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    
+    // 构建输出
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo",
+    
+    // 路径配置
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./frontend/src/*"]
+    },
+    
+    // 类型声明
+    "types": ["react", "react-dom", "vite/client", "node"],
+    
+    // 其他优化
+    "skipLibCheck": true,
+    "useDefineForClassFields": true
   },
-  "include": ["frontend/src", "frontend/src/vite-env.d.ts"],
+  "include": [
+    "frontend/src/**/*",
+    "frontend/src/vite-env.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "build"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

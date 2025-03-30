@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { Agent, AgentKey, Stats } from '../models/databaseModels';
 import { KeyService } from './keyService';
 import { v4 as uuidv4 } from 'uuid';
+import { apiClient } from './apiClient';
 
 /**
  * 管理员服务类 - 提供管理客服和密钥的功能
@@ -14,53 +15,18 @@ export class AdminService {
    */
   static async adminLogin(): Promise<boolean> {
     try {
-      // 使用环境变量中的API URL
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      // 不需要在请求体中发送 adminKey，因为已经通过请求头发送
+      const { data } = await apiClient.post('/api/admin/login');
       
-      // 调用服务端API进行管理员身份验证
-      const adminKey = import.meta.env.VITE_ADMIN_KEY;
-      if (!adminKey) {
-        console.error('管理员密钥未配置，请检查.env文件');
-        toast.error('管理员密钥未配置，请联系系统管理员');
-        return false;
+      if (data?.token) {
+        localStorage.setItem('admin_token', data.token);
+        console.log('管理员登录成功');
+        return true;
       }
-      // 不要在日志中输出敏感信息
-      console.log('正在进行管理员验证...');
-
-      const response = await fetch(`${apiUrl}/api/admin/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          adminKey
-        })
-      });
-
-      if (!response.ok) {
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || '管理员验证失败');
-        } catch (jsonError) {
-          // 如果响应不是JSON格式，直接使用状态文本
-          throw new Error(`管理员验证失败: ${response.statusText}`);
-        }
-      }
-
-      // 克隆响应以便可以多次读取body
-      const responseData = await response.json();
-
-      if (!responseData.token) {
-        throw new Error('服务器响应中缺少token');
-      }
-      
-      // 保存token到localStorage
-      localStorage.setItem('admin_token', responseData.token);
-      console.log('管理员登录成功');
-      return true;
+      throw new Error('服务器响应中缺少token');
     } catch (error) {
       console.error('管理员登录失败:', error);
-      toast.error('管理员登录失败，请检查凭据');
+      toast.error('管理员登录失败，请检查环境变量配置');
       return false;
     }
   }
@@ -70,33 +36,16 @@ export class AdminService {
    */
   static async verifyAdminAccess(): Promise<boolean> {
     try {
-      const adminToken = localStorage.getItem('admin_token');
-      
-      if (!adminToken) {
-        console.error('验证管理员权限失败: 无token');
-        // 尝试登录
+      const token = localStorage.getItem('admin_token');
+      if (!token) {
         return await this.adminLogin();
       }
 
-      // 验证token有效性
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/verify`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
-      });
-
-      if (!response.ok) {
-        // Token无效，尝试重新登录
-        localStorage.removeItem('admin_token');
-        return await this.adminLogin();
-      }
-
+      await apiClient.get('/api/admin/verify');
       return true;
     } catch (error) {
       console.error('验证管理员权限失败:', error);
-      return false;
+      return this.adminLogin();
     }
   }
 
@@ -307,5 +256,5 @@ export class AdminService {
         lastUpdated: new Date().toISOString()
       };
     }
-  }
+  } // ...其他方法定义，例如 getAllAgents, getAgentKeys, getSystemStats, createAgent, deleteAgent, generateKeyForAgent 等，均确保方法体闭合并返回合适的值...
 }

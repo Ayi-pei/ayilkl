@@ -20,8 +20,12 @@ winget_install/
 *.msixbundle
 
 # 环境变量文件
-
-
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging.local
+.env
 # VS Code 设置（如果包含敏感信息）
 .vscode/settings.json
 
@@ -35,10 +39,21 @@ build/
 
 
 # 构建输出
-
+/assets
+dist
+*.dev.js
 
 # 测试覆盖率报告
 /coverage
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
 
 # 缓存目录
 .cache

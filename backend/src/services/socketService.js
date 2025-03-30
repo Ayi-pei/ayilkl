@@ -10,48 +10,30 @@ const onlineAgents = new Map();
 // 存储用户-客服的映射关系
 const userAgentMap = new Map();
 
-/**
- * 初始化Socket.IO服务
- * @param {object} server - HTTP服务器
- * @returns {object} Socket.IO实例
- */
-const initSocketService = (server) => {
-  const io = socketIO(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
+async function authenticateAgent(socket, token, next) {
+  if (!token) {
+    return next(new Error('未提供客服密钥'));
+  }
+  try {
+    const { data, error } = await supabaseService.getAgentByKey(token);
+    if (error || !data) {
+      return next(new Error('无效的客服密钥'));
+    }
+    socket.agentData = {
+      id: data.agents.id,
+      key: token,
+      nickname: data.agents.nickname,
+      avatar: data.agents.avatar,
+  io.use(async (socket, next) => {
+    const { token, type } = socket.handshake.auth;
+    if (type === 'agent') {
+      await authenticateAgent(socket, token, next);
+    } else if (type === 'user') {
+      await authenticateUser(socket, token, next);
+    } else {
+      next(new Error('未知的连接类型'));
     }
   });
-  
-  // Socket.IO中间件：身份验证
-  io.use(async (socket, next) => {
-    try {
-      const token = socket.handshake.auth.token;
-      const type = socket.handshake.auth.type;
-      
-      if (type === 'agent') {
-        // 客服认证
-        if (!token) {
-          return next(new Error('未提供客服密钥'));
-        }
-        
-        try {
-          const { data, error } = await supabaseService.getAgentByKey(token);
-          if (error || !data) {
-            return next(new Error('无效的客服密钥'));
-          }
-          
-          socket.agentData = {
-            id: data.agents.id,
-            key: token,
-            nickname: data.agents.nickname,
-            avatar: data.agents.avatar,
-            status: data.agents.status || 'online'
-          };
-          
-          next();
-        } catch (error) {
-          return next(new Error(error.message));
         }
       } else if (type === 'user') {
         // 用户认证

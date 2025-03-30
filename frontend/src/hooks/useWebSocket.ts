@@ -216,7 +216,7 @@ export const useWebSocket = () => {
           handleCustomerStatusChange(
             data.customerId,
             data.isOnline,
-            data.lastSeen
+            data.lastSeen ?? undefined
           );
         }
         break;

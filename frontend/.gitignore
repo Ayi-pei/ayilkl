@@ -9,6 +9,8 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.env.staging.local
+.env
 
 # 日志
 npm-debug.log*

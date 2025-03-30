@@ -13,6 +13,8 @@ export interface Agent {
   createdAt: string;
   updatedAt: string;
   shareLinkId?: string;
+  key?: string | null;
+  expiryTime?: string | null;
 }
 
 /**
@@ -26,6 +28,9 @@ export interface AgentKey {
   expiresAt: string;
   isActive: boolean;
   agents?: Agent; // 关联关系
+  agentId?: string;
+  agentName?: string;
+  remainingDays?: number;
 }
 
 /**

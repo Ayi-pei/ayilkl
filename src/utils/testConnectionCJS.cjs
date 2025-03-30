@@ -123,7 +123,7 @@ async function testConnection() {
     
     // 如果所有表查询都失败，但基本连接成功，则返回部分成功
     console.log('基本连接成功，但无法访问任何表。请检查数据库权限和表结构。');
-    return sessionData ? true : false;
+    return sessionData;
     
   } catch (err) {
     console.error('连接测试异常:', err);

@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babel/core": "^7.23.9",
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@supabase/supabase-js": "^2.49.1",
     "avatar-upload-server": "file:",
     "cors": "^2.8.5",

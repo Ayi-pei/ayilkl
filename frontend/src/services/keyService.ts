@@ -1,6 +1,6 @@
 // src/services/keyService.ts
 import { toast } from '../components/common/Toast';
-import { KeyVerificationResult as BaseKeyVerificationResult, KeyData, KeyScope, KeyPurpose } from '../types';
+import { KeyVerificationResult as BaseKeyVerificationResult, KeyScope, KeyPurpose, type KeyData } from '../types';
 import { supabase } from './supabase';
 import { KeyManager } from './keyManager';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,7 +28,7 @@ export class KeyService {
       // 验证客服卡密
       const { data, error } = await supabase
         .from('agent_keys')
-        .select('*, agents(id, nickname, avatar, status, share_link_id)')
+        .select('*, agents(id, nickname, avatar, status, created_at, share_link_id)')
         .eq('key', key)
         .eq('is_active', true)
         .single();
@@ -68,9 +68,11 @@ export class KeyService {
         agentId: data.agent_id,
         agentData: data.agents ? {
           id: data.agents.id,
+          name: data.agents.nickname, // 使用 nickname 作为 name
           nickname: data.agents.nickname,
           avatar: data.agents.avatar,
-          status: validStatus
+          status: validStatus,
+          createdAt: data.agents.created_at
         } : undefined,
         linkId: data.agents?.share_link_id // 从客服数据中获取分享链接ID
       };

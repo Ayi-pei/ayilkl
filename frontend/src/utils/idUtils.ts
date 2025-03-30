@@ -1,6 +1,6 @@
 // src/utils/idUtils.ts
 import { nanoid } from 'nanoid';
-import { NANOID_PREFIX } from '../types';
+import { NANOID_PREFIX } from '../types/index';
 
 /**
  * 生成带前缀的唯一ID
