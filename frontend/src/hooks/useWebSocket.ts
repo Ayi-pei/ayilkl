@@ -38,6 +38,9 @@ export const useWebSocket = () => {
     setCustomers
   } = useChatStore();
   
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
   // 声明函数引用，解决循环依赖问题
   const sendAuthMessageRef = useRef<SendAuthMessageFn | null>(null);
   const handleWebSocketMessageRef = useRef<HandleWebSocketMessageFn | null>(null);
@@ -63,6 +66,8 @@ export const useWebSocket = () => {
     }
     
     try {
+      setIsLoading(true);
+      setError(null);
       setConnectStatus(WebSocketStatus.CONNECTING);
       
       // 创建WebSocket连接
@@ -109,15 +114,20 @@ export const useWebSocket = () => {
       };
       
       // 连接错误
-      socket.current.onerror = (error) => {
-        console.error('WebSocket错误:', error);
+      socket.current.onerror = (event) => {
+        const errorMessage = 'WebSocket连接错误';
+        console.error(errorMessage, event);
+        setError(new Error(errorMessage));
         setConnectStatus(WebSocketStatus.ERROR);
+        toast.error(errorMessage);
       };
       
-    } catch (error) {
-      console.error('创建WebSocket连接失败:', error);
-      setConnectStatus(WebSocketStatus.ERROR);
-      toast.error('无法连接到通信服务');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('未知错误');
+      setError(error);
+      toast.error(`连接失败: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   }, [wsUrl, isAuthenticated]);
   
@@ -271,7 +281,10 @@ export const useWebSocket = () => {
     connectStatus,
     isConnected: connectStatus === WebSocketStatus.OPEN,
     isConnecting: connectStatus === WebSocketStatus.CONNECTING || connectStatus === WebSocketStatus.RECONNECTING,
-    isFailed: connectStatus === WebSocketStatus.ERROR
+    isFailed: connectStatus === WebSocketStatus.ERROR,
+    isLoading,
+    error,
+    resetError: () => setError(null)
   };
 };
 

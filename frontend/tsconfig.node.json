@@ -10,8 +10,14 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "target": "ESNext",
-    "lib": ["ESNext"],
-    "types": ["node"]
+    "lib": [
+      "ESNext"
+    ],
+    "types": [
+      "node"
+    ]
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "frontend/vite.config.ts"
+  ]
 }

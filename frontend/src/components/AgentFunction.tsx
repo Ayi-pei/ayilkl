@@ -1,4 +1,5 @@
 // 修改导入，添加我们定义的类型和常量
+import React from 'react';
 import { LinkService } from '../services/linkService';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -35,7 +36,7 @@ interface AgentFunctionProps {
 }
 
 // 不再使用 TabPane，改用 items 属性
-const { Option } = Select;
+const { TabPane } = Tabs;
 const { TextArea } = Input;
 
 const AgentFunction = ({ className: _className }: AgentFunctionProps) => {
@@ -638,35 +639,37 @@ const renderRightPanel = () => {
             
             <Divider />
             
-            <List
-              className="quick-reply-list"
-              dataSource={quickReplies}
-              renderItem={item => (
-                <List.Item key={item.id} className="quick-reply-item">
-                  <Card 
-                    title={item.title}
-                    extra={
-                      <Button 
-                        type="text" 
-                        danger 
-                        icon={<DeleteOutlined />} 
-                        onClick={() => handleDeleteQuickReply(item.id)}
-                        aria-label="删除快速回复"
-                      />
-                    }
-                    hoverable
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      handleQuickReplyClick(item.content);
-                    }}
-                  >
-                    <div className="quick-reply-preview">
-                      {item.content.length > 50 
-                        ? item.content.substring(0, 50) + '...' 
-                        : item.content}
-                    </div>
-                  </Card>
-                </List.Item>
+          <List
+            className="quick-reply-list"
+            dataSource={quickReplies}
+            renderItem={(item) => (
+              <List.Item key={item.id} className="quick-reply-item">
+                <Card
+                  title={item.title}
+                  extra={
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();  // Prevent card click when deleting
+                        handleDeleteQuickReply(item.id);
+                      }}
+                      aria-label="删除快速回复"
+                    />
+                  }
+                  hoverable
+                  onClick={() => handleQuickReplyClick(item.content)}
+                >
+                  <div className="quick-reply-preview">
+                    {item.content.length > 50
+                      ? `${item.content.substring(0, 50)}...`
+                      : item.content}
+                  </div>
+                </Card>
+              </List.Item>
+            )}
+          />
               )}
               locale={{
                 emptyText: <Empty description="暂无快速回复" />

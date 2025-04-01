@@ -9,6 +9,12 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import '../styles/chatPage.css';
 import { toast } from '../components/common/Toast';
+import { StreamChat } from 'stream-chat';
+import { Chat, Channel, MessageList, MessageInput } from 'stream-chat-react';
+import 'stream-chat-react/dist/css/index.css';
+
+// 从环境变量获取配置
+const STREAM_API_KEY = import.meta.env.VITE_STREAM_CHAT_API_KEY;
 
 const ChatPage: React.FC = () => {
   const { linkId } = useParams<{ linkId: string }>();
@@ -24,7 +30,10 @@ const ChatPage: React.FC = () => {
   const { connectWebSocket } = useWebSocket();
   const [error, setError] = useState<string | null>(null);
   const [isCreatingTempUser, setIsCreatingTempUser] = useState<boolean>(false);
-  
+  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
+  const [channel, setChannel] = useState<Channel | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const initPage = async () => {
       try {
@@ -117,6 +126,55 @@ const ChatPage: React.FC = () => {
     initPage();
   }, [linkId, isAuthenticated, userType, agentData, initializeChat, connectWebSocket, navigate, login]);
 
+  useEffect(() => {
+    const initChat = async () => {
+      try {
+        setLoading(true);
+        // 初始化 client
+        const client = StreamChat.getInstance(STREAM_API_KEY);
+
+        // 从后端获取用户 token
+        const { token, userId } = await fetchUserToken();
+
+        // 连接用户
+        await client.connectUser(
+          {
+            id: userId,
+            name: userData.name,
+            image: userData.avatar
+          },
+          token
+        );
+
+        // 获取或创建频道
+        const channel = client.channel('messaging', 'customer-service', {
+          name: '客服频道',
+          members: [userId]
+        });
+
+        await channel.watch();
+
+        setChatClient(client);
+        setChannel(channel);
+        setError(null);
+      } catch (err) {
+        console.error('Chat initialization failed:', err);
+        setError('聊天初始化失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initChat();
+
+    // Cleanup
+    return () => {
+      if (chatClient) {
+        chatClient.disconnectUser();
+      }
+    };
+  }, []);
+
   // 根据用户类型渲染不同的聊天界面
   const chatPageClass = { CHAT_PAGE: 'chat-page' };
 
@@ -137,7 +195,7 @@ const ChatPage: React.FC = () => {
   }
 
   // 加载中
-  if (isInitializing || isCreatingTempUser) {
+  if (isInitializing || isCreatingTempUser || loading) {
     return (
       <div className="chat-loading-container">
         <Spin size="large" />
@@ -148,6 +206,10 @@ const ChatPage: React.FC = () => {
     );
   }
 
+  if (!chatClient || !channel) {
+    return <div>聊天未初始化</div>;
+  }
+
   return (
     <div className="chat-page-container">
       {userType === 'agent' ? (
@@ -155,6 +217,12 @@ const ChatPage: React.FC = () => {
       ) : (
         <UserFunction className={`${chatPageClass}-user-function`} />
       )}
+      <Chat client={chatClient} theme="messaging light">
+        <Channel channel={channel}>
+          <MessageList />
+          <MessageInput />
+        </Channel>
+      </Chat>
     </div>
   );
 };

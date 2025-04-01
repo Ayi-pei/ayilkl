@@ -5,23 +5,19 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true,
     "forceConsistentCasingInFileNames": true,
-    
-    // 新增 Node.js 环境支持
-    "types": ["node"],
-    
-    // 提供更完整的 ES 模块兼容性
+    "strict": true,
     "esModuleInterop": true,
-    
-    // 允许导入 JSON 文件(常用于配置)
     "resolveJsonModule": true,
-    
-    // 明确输出目标版本
     "target": "ESNext",
-    
-    // Vite 配置不需要检查 DOM API
-    "lib": ["ESNext"]
+    "lib": [
+      "ESNext"
+    ],
+    "types": [
+      "node"
+    ]
   },
-  "include": ["frontend/vite.config.ts"]
+  "include": [
+    "frontend/vite.config.ts"
+  ]
 }

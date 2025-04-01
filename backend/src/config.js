@@ -17,7 +17,7 @@ validateEnv([
 
 const config = {
   // 基础配置
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // Supabase配置

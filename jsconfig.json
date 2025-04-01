@@ -5,8 +5,19 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "*": ["*", "src/*"]
+      "*": [
+        "*",
+        "src/*"
+      ]
     }
   },
-  "exclude": ["node_modules", "**/node_modules/*", "dist", "build"]
+  "include": [
+    "src/**/*"
+  ], // 👉 加上这一行，让 TypeScript 处理 src 目录的 .ts / .tsx 文件
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*",
+    "dist",
+    "build"
+  ]
 }

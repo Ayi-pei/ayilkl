@@ -5,6 +5,8 @@ import { useUserStore } from '../../stores/userStore';
 import { getCurrentTheme } from '../../utils/themeUtils';
 import 'react-toastify/dist/ReactToastify.css';
 import './Toast.css';
+import React from 'react';
+
 
 // 全局Toast接口
 export const toast = {

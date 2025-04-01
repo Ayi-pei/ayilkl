@@ -1,9 +1,8 @@
 // src/utils/index.ts
-// 导出所有工具函数，方便统一导入
 
-export * from './authUtils';
-export * from './formatUtils';
+// 重新导出 messageUtils 模块中的所有导出
 export * from './messageUtils';
-export * from './themeUtils';
-export * from './idUtils';
-// 导出其他工具函数
+
+// 如果你还有其他工具函数，也可以在这里导出，例如：
+// export * from './formatUtils';
+// export * from './idUtils';

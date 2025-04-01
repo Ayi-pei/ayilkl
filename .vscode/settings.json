@@ -27,5 +27,14 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "editor.fontSize": 14,
-  "explorer.confirmDelete": false
+  "explorer.confirmDelete": false,
+  "stream.chat": {
+    "apiKey": "dw5h3aquxkzz",
+    "apiSecret": "fh2w2fvtvk9296cd6jj9a5pgs3ktenwmrwmtbjfn4m8k2pjzw48ekge98wkcgmu9",
+    "timeout": 5000
+  },
+  "github.copilot.chat.codeGeneration.useInstructionFiles": false,
+  "github.copilot.chat.edits.suggestRelatedFilesForTests": false,
+  "github.copilot.chat.edits.suggestRelatedFilesFromGitHistory": false,
+  "github.copilot.advanced": {}
 }

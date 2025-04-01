@@ -1,19 +1,23 @@
 {
-	// ...existing code...
-	"configurations": [
-		{
-			"type": "node",
-			"request": "launch",
-			"name": "Launch Node Program",
-			"console": "integratedTerminal"
-			// ...existing code...
-		},
-		{
-			"type": "node",
-			"request": "attach",
-			"name": "Attach Program",
-			"port": 9229
-		}
-	]
-	// ...existing code...
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node", 
+            "request": "launch",
+            "name": "Launch Node Program",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/src/index.ts",
+            "preLaunchTask": "tsc: build - tsconfig.json",
+            "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+        },
+        {
+            "type": "node",
+            "request": "attach", 
+            "name": "Attach Program",
+            "port": 9229,
+            "restart": true,
+            "sourceMaps": true,
+            "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+        }
+    ]
 }

@@ -1,5 +1,7 @@
 // src/types/index.ts - 主要类型定义
 
+import type { MessageType, SenderType } from "../utils/messageUtils";
+
 // 预设的30个nanoid密钥，可以根据日期轮换使用
 export const PRESET_KEYS = [
   'ayi_key_1_nano',
@@ -11,26 +13,28 @@ export type UserType = 'admin' | 'agent' | 'user' | null;
 // 统一 AgentData 接口
 export interface AgentData {
   id: string;
-  createdAt: string;
-  name: string;
-  nickname?: string | null;
-  avatar?: string | null;
-  status?: string | null;
-  [key: string]: unknown; // 允许其他未知字段
+  nickname: string;
+  avatar: string;
+  status: 'online' | 'away' | 'busy';
+  soundEnabled?: boolean | null;
+  welcomeMessages?: string[] | null;
 }
 
 // 统一 Message 接口
 export interface Message {
   id: string;
   content: string;
-  type: 'text' | 'image' | 'audio' | 'file' | 'zip' | 'exe' | 'system';
-  sender: 'user' | 'agent' | 'customer' | 'system';
-  recipientId?: string | null;
+  type: MessageType; // 修改这里，使用枚举类型而非字面量联合类型
+  sender: SenderType;
+  recipientId?: string;
   fileName?: string | null;
   fileSize?: number | null;
   timestamp: string;
-  [key: string]: unknown; // 允许其他未知字段
+  streamMessageId?: string; // Stream Chat 消息 ID
+  isRead?: boolean; // 已读状态
+  createdAt: string;
 }
+
 
 // 客户状态数据
 export interface CustomerStatusData {
@@ -71,6 +75,9 @@ export interface WebSocketMessage extends WebSocketMessageBase {
   | 'auth'
   | 'message'
   | 'chat_message'
+  | 'stream_chat_message' // Stream Chat 消息
+  | 'stream_chat_typing' // Stream Chat 输入中状态
+  | 'stream_chat_read' // Stream Chat 已读状态
   | 'customer_online'
   | 'customer_offline'
   | 'customer_status'
@@ -78,7 +85,7 @@ export interface WebSocketMessage extends WebSocketMessageBase {
   | 'ping'
   | 'pong'
   | 'error'
-  | 'customers_list';  // 限定其它可能的类型移除string以消除冗余
+  | 'customers_list';
 }
 
 // WebSocket 消息数据类型
@@ -92,11 +99,12 @@ export type WebSocketMessageData =
   | Record<string, unknown>;  // 兼容其他数据类型
 
 export interface AuthData {
-  token: string;
-  userId?: string | null;
-  userType?: UserType;  // 使用统一的 UserType
-  id?: string | null;
+  token: string; // Stream Chat 认证 token
+  userId: string; // 用户 ID
+  userType: UserType; // 'admin' | 'agent' | 'user' | null
+  chatToken?: string; // Stream Chat 专用 token
 }
+
 
 export interface MessageData {
   id: string;
@@ -221,12 +229,13 @@ export interface LinkVerificationResult extends LinkInfo {
 // 卡密验证结果
 export interface KeyVerificationResult {
   valid: boolean;
-  isAdmin?: boolean | null;
-  agentId?: string | null;
-  agentData?: AgentData | null;
-  message?: string | null;
-  expiresAt?: string | null;
-  linkId?: string | null;
+  isAdmin?: boolean;
+  agentId?: string;
+  agentData?: AgentData;
+  message?: string;
+  expiresAt?: string;
+  linkId?: string;
+  streamChatToken?: string; // Stream Chat 认证 token
 }
 
 export interface TokenData {

@@ -39,6 +39,8 @@ import { useAuthStore } from '../stores/authStore';
 import '../styles/admin.css';
 import { testSupabaseConnection } from '../utils/testSupabase';
 import { Agent as AgentModel, AgentKey as AgentKeyModel, Stats as StatsModel } from '../models/databaseModels';
+import { StreamChat } from 'stream-chat';
+import { Chat, Channel, MessageList, MessageInput } from 'stream-chat-react';
 
 const { Header, Content, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -98,6 +100,8 @@ const processAgentKey = (agentKey: AgentKeyModel): AgentKeyModel => ({
 
 // 示例：当获取所有客服后，对每个客服进行默认处理
 
+const STREAM_API_KEY = import.meta.env.VITE_STREAM_CHAT_API_KEY;
+
 const AdminPage: React.FC = () => {
   const { logout } = useAuthStore();
   const [newAgentForm] = Form.useForm();
@@ -122,6 +126,7 @@ const AdminPage: React.FC = () => {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [keyExpiryDays, setKeyExpiryDays] = useState<number>(30);
+  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
   
   // 复制到剪贴板
   const copyToClipboard = (text: string) => {
@@ -242,7 +247,36 @@ const AdminPage: React.FC = () => {
       loadKeysData();
     }
   }, [activeMenu, loadDashboardData, loadAgentsData, loadKeysData]);
-  
+
+  useEffect(() => {
+    const initAdminChat = async () => {
+      try {
+        const client = StreamChat.getInstance(STREAM_API_KEY);
+        const { token } = await fetchAdminToken();
+
+        await client.connectUser(
+          {
+            id: 'admin',
+            name: 'System Admin',
+            role: 'admin'
+          },
+          token
+        );
+
+        setChatClient(client);
+      } catch (err) {
+        console.error('Admin chat initialization failed:', err);
+      }
+    };
+
+    initAdminChat();
+    return () => {
+      if (chatClient) {
+        chatClient.disconnectUser();
+      }
+    };
+  }, []);
+
   // 创建新客服
   const handleCreateAgent = async (values: { nickname: string }) => {
     setLoading(prev => ({ ...prev, addingAgent: true }));
@@ -892,66 +926,29 @@ const AdminPage: React.FC = () => {
       </Modal>
     </div>
   );
-  
+
+  const client = StreamChat.getInstance('你的API密钥');
+
+  // 客服用户登录
+  client.connectUser({
+    id: 'admin-id',
+    name: '客服',
+    image: '客服头像URL'
+  }, '客服令牌');
+
+  // 监听所有客户频道
+  const channel = client.channel('messaging', 'customer-service');
+
   return (
-    <Layout className="admin-layout">
-      <Sider width={200} className="admin-sider">
-        <div className="logo">
-          <Title level={4} style={{ color: '#fff', margin: '16px 0', textAlign: 'center' }}>
-            管理后台
-          </Title>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[activeMenu]}
-          style={{ height: '100%', borderRight: 0 }}
-          onClick={e => setActiveMenu(e.key)}
-          items={[
-            {
-              key: 'dashboard',
-              icon: <DashboardOutlined />,
-              label: '仪表盘'
-            },
-            {
-              key: 'agents',
-              icon: <TeamOutlined />,
-              label: '客服管理'
-            },
-            {
-              key: 'keys',
-              icon: <KeyOutlined />,
-              label: '密钥管理'
-            }
-          ]}
-        />
-        <div className="sider-footer">
-          <Button 
-            type="link" 
-            icon={<LogoutOutlined />} 
-            onClick={logout}
-            style={{ color: '#fff' }}
-          >
-            退出登录
-          </Button>
-        </div>
-      </Sider>
-      
-      <Layout className="admin-content-layout">
-        <Header className="admin-header">
-          <div className="header-title">
-            {activeMenu === 'dashboard' && '系统仪表盘'}
-            {activeMenu === 'agents' && '客服管理'}
-            {activeMenu === 'keys' && '密钥管理'}
-          </div>
-        </Header>
-        
-        <Content className="admin-content">
-          {activeMenu === 'dashboard' && renderDashboard()}
-          {activeMenu === 'agents' && renderAgentsManagement()}
-          {activeMenu === 'keys' && renderKeysManagement()}
-        </Content>
-      </Layout>
-    </Layout>
+    <div className="admin-chat">
+      <h2>客服工作台</h2>
+      <Chat client={client} theme="messaging light">
+        <Channel channel={channel}>
+          <MessageList />
+          <MessageInput />
+        </Channel>
+      </Chat>
+    </div>
   );
 };
 
