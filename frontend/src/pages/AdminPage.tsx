@@ -33,6 +33,7 @@ import {
   message,
   Alert, // Added Alert
   Spin, // Added Spin
+  Tabs, // <<< ADD Tabs
 } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 // Ensure AntD specific type imports are present
@@ -42,7 +43,11 @@ import { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { 
     getAdminAgents, AdminAgentListItem, PaginatedAgentsResponse, GetAgentsParams, 
     AdminKeyBasicInfo, getAvailableKeysForAssignment,
-    createAdminAgent, CreateAdminAgentPayload // Add these
+    createAdminAgent, CreateAdminAgentPayload, 
+    updateAgentDetails, updateAgentStatus, assignNewKeyToAgent,
+    deleteAdminAgent,
+    AdminGeneratedKeyListItem, PaginatedGeneratedKeysResponse, GetGeneratedKeysParams, getAdminGeneratedKeys,
+    generateNewAdminKey, AdminGeneratedKeyDetails // <<< ADD THESE
 } from '../services/adminApiService';
 
 import { toast } from '../components/common/Toast';
@@ -135,6 +140,23 @@ const AdminPage: React.FC = () => {
     const [addAgentForm] = Form.useForm();
     const [isSubmittingAgent, setIsSubmittingAgent] = useState<boolean>(false);
     
+    // State variables for Edit Agent Modal
+    const [isEditAgentModalVisible, setIsEditAgentModalVisible] = useState<boolean>(false);
+    const [editingAgent, setEditingAgent] = useState<AdminAgentListItem | null>(null);
+    const [editAgentForm] = Form.useForm();
+
+    // For Key Management Tab
+    const [keysResponse, setKeysResponse] = useState<PaginatedGeneratedKeysResponse | null>(null);
+    const [loadingKeysTable, setLoadingKeysTable] = useState<boolean>(true);
+    const [errorKeysTable, setErrorKeysTable] = useState<string | null>(null);
+    const [keysTableParams, setKeysTableParams] = useState<GetGeneratedKeysParams>({
+        page: 1,
+        limit: 10,
+    });
+    // const [isGenerateKeyModalVisible, setIsGenerateKeyModalVisible] = useState<boolean>(false); // For later
+    const [isGeneratingKey, setIsGeneratingKey] = useState<boolean>(false);
+    // const [isSubmittingKey, setIsSubmittingKey] = useState<boolean>(false); // This might be redundant if isGeneratingKey serves the same purpose
+    
     // Remaining state variables from the old code structure, to be reviewed later for relevance
     const [newAgentForm] = Form.useForm(); // This is duplicated by addAgentForm, consider removing. For now, keeping both as per file content.
     const [activeMenu, setActiveMenu] = useState<string>('dashboard'); 
@@ -219,6 +241,184 @@ const AdminPage: React.FC = () => {
         }
     };
 
+    const showEditAgentModal = async (agent: AdminAgentListItem) => {
+        setEditingAgent(agent); // Set the agent being edited
+
+        // Pre-fill form with existing agent data
+        editAgentForm.setFieldsValue({
+            nickname: agent.nickname,
+            account_status: agent.account_status,
+            generated_key_id: agent.current_key_id || undefined, // Use current_key_id if available
+        });
+
+        setLoadingKeys(true);
+        try {
+            const assignableKeys = await getAvailableKeysForAssignment();
+            let keysForDropdown = [...assignableKeys];
+
+            // Ensure the agent's current key is in the dropdown, selected, even if it's assigned to them.
+            // getAvailableKeysForAssignment returns UNASSIGNED keys.
+            if (agent.current_key_id) {
+                const isCurrentKeyInList = assignableKeys.some(k => k.id === agent.current_key_id);
+                if (!isCurrentKeyInList && agent.assigned_key_value_masked && agent.key_expires_at) {
+                    // If current key is not in the 'assignableKeys' list (because it's assigned to this agent),
+                    // add it to our list for the dropdown.
+                    keysForDropdown.unshift({ // Add to the beginning
+                        id: agent.current_key_id,
+                        key_value_masked: agent.assigned_key_value_masked,
+                        expires_at: agent.key_expires_at,
+                    });
+                }
+            }
+            
+            setAvailableKeys(keysForDropdown);
+            setIsEditAgentModalVisible(true); // Show modal after keys are prepared
+        } catch (err: any) {
+            message.error(err.message || "Failed to fetch available keys for editing.");
+            setAvailableKeys([]); // Clear keys on error to prevent stale data in modal
+            // Still open the modal but key selection might be disabled or show error
+            setIsEditAgentModalVisible(true); 
+        } finally {
+            setLoadingKeys(false);
+        }
+    };
+
+    const handleEditAgentCancel = () => {
+        setIsEditAgentModalVisible(false);
+        setEditingAgent(null);
+        // editAgentForm.resetFields(); // Modal's destroyOnClose will handle this
+    };
+
+    const handleEditAgentOk = async () => {
+        if (!editingAgent) {
+            message.error("No agent selected for editing. Please close the modal and try again.");
+            return;
+        }
+
+        try {
+            const formValues = await editAgentForm.validateFields();
+            setIsSubmittingAgent(true);
+
+            const apiPromises = [];
+
+            // 1. Check and prepare nickname update
+            const originalNickname = editingAgent.nickname || ''; // Treat null/undefined as empty string for comparison
+            const newNickname = formValues.nickname || '';
+            if (newNickname !== originalNickname) {
+                 apiPromises.push(updateAgentDetails(editingAgent.id, { nickname: newNickname }));
+            }
+            
+            // 2. Check and prepare account status update
+            if (formValues.account_status !== editingAgent.account_status) {
+                apiPromises.push(updateAgentStatus(editingAgent.id, formValues.account_status));
+            }
+
+            // 3. Check and prepare assigned key update
+            if (formValues.generated_key_id !== editingAgent.current_key_id) {
+                apiPromises.push(assignNewKeyToAgent(editingAgent.id, formValues.generated_key_id));
+            }
+
+            if (apiPromises.length > 0) {
+                // Wait for all necessary API calls to complete
+                await Promise.all(apiPromises);
+                message.success(`Agent '${editingAgent.nickname || editingAgent.id}' updated successfully!`);
+            } else {
+                message.info("No changes were made to the agent.");
+            }
+            
+            setIsEditAgentModalVisible(false);
+            setEditingAgent(null); // Clear the editing agent
+            fetchAgents(tableParams); // Refresh the main agent list regardless of changes (in case of subtle backend updates)
+
+        } catch (error: any) {
+            // This will catch form validation errors from validateFields() 
+            // or errors from Promise.all() if any API call fails.
+            console.error('Failed to update agent:', error);
+            if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) { 
+                // This structure is typical for AntD form validation errors
+                message.error('Please correct the form errors before submitting.');
+            } else if (error.message) { // For API errors thrown from services
+                message.error(`Update failed: ${error.message}`);
+            } else {
+                message.error('An unexpected error occurred while updating the agent.');
+            }
+        } finally {
+            setIsSubmittingAgent(false);
+        }
+    };
+
+    const handleDeleteAgent = (agentId: string, agentNickname?: string | null) => {
+        Modal.confirm({
+            title: `Confirm Deletion`,
+            content: `Are you sure you want to delete agent '${agentNickname || agentId}'? This action cannot be undone. Their assigned key will be unassigned.`,
+            okText: 'Delete',
+            okType: 'danger',
+            cancelText: 'Cancel',
+            onOk: async () => {
+                try {
+                    setLoading(true); // Use main table loading state
+                    await deleteAdminAgent(agentId);
+                    message.success(`Agent '${agentNickname || agentId}' deleted successfully.`);
+                    fetchAgents(tableParams); // Refresh the list
+                } catch (error: any) {
+                    message.error(`Failed to delete agent: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            },
+        });
+    };
+
+    const fetchGeneratedKeys = useCallback(async (params: GetGeneratedKeysParams) => {
+        setLoadingKeysTable(true);
+        setErrorKeysTable(null);
+        try {
+            const response = await getAdminGeneratedKeys(params);
+            setKeysResponse(response);
+        } catch (err: any) {
+            setErrorKeysTable(err.message || 'Failed to fetch generated keys.');
+            message.error(err.message || 'Failed to fetch generated keys.');
+            setKeysResponse(null);
+        } finally {
+            setLoadingKeysTable(false);
+        }
+    }, []);
+
+    const handleGenerateNewKey = async () => {
+        setIsGeneratingKey(true);
+        try {
+            const newKey = await generateNewAdminKey();
+            // Display the new key securely or inform the admin it's generated.
+            // For this example, we'll show part of it in a success message.
+            // In a real app, you might copy it to clipboard or display in a temporary, dismissible way.
+            Modal.success({ // Using Modal.success for better visibility of the new key
+                title: 'New Key Generated Successfully!',
+                content: (
+                    <div>
+                        <p>A new key has been generated and is active for 24 hours.</p>
+                        <p><strong>Key ID:</strong> {newKey.id}</p>
+                        <p><strong>Key Value (Masked):</strong> {newKey.key_value.slice(0, 8) + '...' + newKey.key_value.slice(-4)}</p>
+                        <p><strong>Expires At:</strong> {new Date(newKey.expires_at).toLocaleString()}</p>
+                        <p style={{fontWeight: 'bold', color: 'red'}}>Please securely note down the full key value if needed elsewhere. This is a placeholder display.</p>
+                        {/* In a real app, avoid showing the full key directly for long.
+                            Perhaps offer a "Copy to Clipboard" for the full key value: newKey.key_value 
+                            This example shows a masked version for safety in UI.
+                            The backend returns the full key; admin needs to see it once.
+                            A better UI might be to show it once, clearly, then mask or remove.
+                        */}
+                    </div>
+                ),
+                // okText: "Copy Key & Close", // Example for future enhancement
+                // onOk: () => { navigator.clipboard.writeText(newKey.key_value) } 
+            });
+            fetchGeneratedKeys(keysTableParams); // Refresh the keys list
+        } catch (err: any) {
+            message.error(err.message || 'Failed to generate new key.');
+        } finally {
+            setIsGeneratingKey(false);
+        }
+    };
+
     useEffect(() => {
         if (isAuthenticated && userType === 'admin') {
             fetchAgents(tableParams);
@@ -235,6 +435,17 @@ const AdminPage: React.FC = () => {
             setAgentsResponse(null);
         }
     }, [fetchAgents, tableParams, isAuthenticated, userType]);
+
+    // This useEffect is for fetching generated keys and is already present from a previous turn.
+    // The new useEffect for fetching keys based on tab change will be added later if needed,
+    // or this one will be adapted. For now, this existing one is fine.
+    useEffect(() => {
+        // Fetch keys only if the keys tab is active (implementation detail for later if needed)
+        // For now, fetch if admin is authenticated.
+        if (isAuthenticated && userType === 'admin') {
+            fetchGeneratedKeys(keysTableParams);
+        }
+    }, [fetchGeneratedKeys, keysTableParams, isAuthenticated, userType]);
 
   // 复制到剪贴板
   const copyToClipboard = (text: string) => {
@@ -1070,13 +1281,16 @@ const AdminPage: React.FC = () => {
                     borderRadius: '8px', 
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)' 
                 }}>
-                    <Title level={4} style={{ marginBottom: 20, borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
-                        Agent Management Console
-                    </Title>
-                    
-                    <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-                        <Col xs={24} sm={24} md={10} lg={7} xl={6}>
-                            <Search
+                    <Title level={3} style={{ marginBottom: 20 }}>Admin Console</Title>
+                    <Tabs defaultActiveKey="agentManagement">
+                        <Tabs.TabPane tab="Agent Management" key="agentManagement">
+                            <Title level={4} style={{ marginBottom: 20, borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
+                                Agent Management Console
+                            </Title>
+                            
+                            <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+                                <Col xs={24} sm={24} md={10} lg={7} xl={6}>
+                                    <Search
                                 placeholder="Search by nickname..."
                                 onSearch={(value) => {
                                     setTableParams(prev => ({ ...prev, page: 1, search: value.trim() || undefined }));
@@ -1170,19 +1384,22 @@ const AdminPage: React.FC = () => {
                             { title: 'Created At', dataIndex: 'created_at', key: 'created_at', width: 180, render: (date: string) => new Date(date).toLocaleString(), sorter: (a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() },
                             { title: 'Assigned Key', dataIndex: 'assigned_key_value_masked', key: 'assigned_key_value_masked', width: 150 },
                             { title: 'Key Expires At', dataIndex: 'key_expires_at', key: 'key_expires_at', width: 180, render: (date: string | null) => date ? new Date(date).toLocaleString() : 'N/A', sorter: (a,b) => new Date(a.key_expires_at || 0).getTime() - new Date(b.key_expires_at || 0).getTime() },
-                            // { 
-                            //     title: 'Actions', 
-                            //     key: 'actions',
-                            //     fixed: 'right',
-                            //     width: 180,
-                            //     render: (_, record) => (
-                            //         <Space size="small">
-                            //             <Button type="link" size="small" onClick={() => console.log('Edit Agent', record.id)}>Edit</Button>
-                            //             <Button type="link" size="small" onClick={() => console.log('Assign Key', record.id)}>Assign Key</Button>
-                            //             <Button type="link" danger size="small" onClick={() => console.log('Delete Agent', record.id)}>Delete</Button>
-                            //         </Space>
-                            //     ),
-                            // },
+                            { 
+                                title: 'Actions', 
+                                key: 'actions',
+                                fixed: 'right', // Optional: fixes the column to the right
+                                width: 180,     // Adjust width as needed
+                                render: (_, record: AdminAgentListItem) => (
+                                    <Space size="small">
+                                        <Button type="link" size="small" onClick={() => showEditAgentModal(record)}>
+                                            Edit
+                                        </Button>
+                                        <Button type="link" danger size="small" onClick={() => handleDeleteAgent(record.id, record.nickname)}>
+                                            Delete
+                                        </Button>
+                                    </Space>
+                                ),
+                            },
                         ]}
                         dataSource={agentsResponse?.data || []}
                         rowKey="id"
@@ -1211,6 +1428,67 @@ const AdminPage: React.FC = () => {
                     <Typography.Paragraph type="secondary" style={{marginTop: 15, fontSize: '0.85em', textAlign: 'center'}}>
                         Note: "Online Status" is indicative and based on the last data refresh. For real-time status, WebSocket integration would be needed for this panel. Client-side sorting is enabled for some columns.
                     </Typography.Paragraph>
+                        </Tabs.TabPane>
+                        <Tabs.TabPane tab="Key Management" key="keyManagement">
+                            <Title level={4} style={{ marginBottom: 20 }}>Key Management Console</Title>
+                            {/* Placeholder for Key Filters/Actions */}
+                            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                                <Col xs={24} sm={12} md={8} lg={6}> {/* Adjust column spans */}
+                                    <Button 
+                                        type="primary" 
+                                        onClick={handleGenerateNewKey}
+                                        loading={isGeneratingKey}
+                                        block  // Make button take full width of Col
+                                    >
+                                        Generate New Key
+                                    </Button>
+                                </Col>
+                                <Col xs={24} sm={12} md={8} lg={6}> {/* Adjust column spans */}
+                                    <Button 
+                                        icon={<ReloadOutlined />} 
+                                        onClick={() => fetchGeneratedKeys(keysTableParams)} 
+                                        loading={loadingKeysTable}
+                                        block // Make button take full width of Col
+                                    >
+                                        Refresh Keys List
+                                    </Button>
+                                </Col>
+                                {/* Add Key Filters Here Later if needed */}
+                            </Row>
+                            {errorKeysTable && !loadingKeysTable && (
+                                <Alert message="Error Fetching Keys" description={errorKeysTable} type="error" showIcon closable style={{ marginBottom: 16 }} onClose={() => setErrorKeysTable(null)} />
+                            )}
+                            <Table<AdminGeneratedKeyListItem>
+                                columns={[
+                                    // Define columns for keys: Masked Value, Expires, Assigned To, Status, Actions etc.
+                                    { title: 'Key ID (Masked)', dataIndex: 'key_value_masked', key: 'key_value_masked', width: 180 },
+                                    { title: 'Expires At', dataIndex: 'expires_at', key: 'expires_at', render: (date: string) => new Date(date).toLocaleString(), width: 200 },
+                                    { title: 'Assigned To', dataIndex: 'assigned_agent_nickname', key: 'assigned_agent_nickname', render: (nick) => nick || <Tag>Unassigned</Tag>, width: 180 },
+                                    { title: 'Status', key: 'status', width: 120, render: (_, record: AdminGeneratedKeyListItem) => {
+                                        if (record.is_expired) return <Tag color="red">Expired</Tag>;
+                                        if (!record.is_active_manual) return <Tag color="orange">Inactive (Manual)</Tag>;
+                                        return <Tag color="green">Active</Tag>;
+                                    }},
+                                    { title: 'Created At', dataIndex: 'created_at', key: 'created_at', render: (date: string) => new Date(date).toLocaleString(), width: 200},
+                                    // { title: 'Actions', key: 'key_actions', width: 150, render: (_,record) => <Space size="small"> /* Activate/Deactivate Button */</Space>}
+                                ]}
+                                dataSource={keysResponse?.data || []}
+                                rowKey="id"
+                                pagination={{
+                                    current: keysTableParams.page,
+                                    pageSize: keysTableParams.limit,
+                                    total: keysResponse?.pagination?.total || 0,
+                                    showSizeChanger: true,
+                                }}
+                                loading={loadingKeysTable}
+                                onChange={(pagination: TablePaginationConfig) => {
+                                    setKeysTableParams(prev => ({ ...prev, page: pagination.current || 1, limit: pagination.pageSize || 10 }));
+                                }}
+                                scroll={{ x: 1000 }}
+                                bordered
+                            />
+                        </Tabs.TabPane>
+                    </Tabs>
                 </Content> 
             </Layout> {/* This is the inner Layout closing tag */}
 
@@ -1251,6 +1529,72 @@ const AdminPage: React.FC = () => {
                         </Form.Item>
                     </Form>
                 </Modal>
+
+            {editingAgent && ( /* Conditionally render Modal only if editingAgent is not null */
+                <Modal
+                    title={`Edit Agent: ${editingAgent.nickname || editingAgent.id}`}
+                    open={isEditAgentModalVisible}
+                    onOk={handleEditAgentOk} // To be fully implemented later
+                    onCancel={handleEditAgentCancel}
+                    confirmLoading={isSubmittingAgent} // Reuse isSubmittingAgent state
+                    destroyOnClose // Resets form fields when modal is closed
+                    forceRender // Ensures form instance is available
+                    maskClosable={false} // Optional: prevent closing on overlay click during edit
+                >
+                    <Form form={editAgentForm} layout="vertical" name="edit_agent_form_in_modal">
+                        <Form.Item
+                            name="nickname"
+                            label="Nickname"
+                            rules={[{ required: false }]} 
+                        >
+                            <Input placeholder="Enter agent nickname (optional)" />
+                        </Form.Item>
+                        <Form.Item
+                            name="account_status"
+                            label="Account Status"
+                            rules={[{ required: true, message: 'Please select the account status!' }]}
+                        >
+                            <Select placeholder="Select account status">
+                                <Option value="enabled">Enabled</Option>
+                                <Option value="disabled">Disabled</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item
+                            name="generated_key_id"
+                            label="Assign Key"
+                            tooltip="Select a key to assign. This will replace the agent's current key if different."
+                            rules={[{ required: true, message: 'An agent must have an assigned key.' }]}
+                        >
+                            <Select
+                                loading={loadingKeys}
+                                placeholder="Select an available key"
+                                showSearch
+                                optionFilterProp="children" // Allows searching by the text content of Option
+                                filterOption={(input, option) => 
+                                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                }
+                                notFoundContent={loadingKeys ? <Spin size="small" /> : "No suitable keys found (or error loading them)."}
+                                disabled={loadingKeys}
+                            >
+                                {availableKeys.map(key => (
+                                    <Option 
+                                        key={key.id} 
+                                        value={key.id} 
+                                        // 'label' prop is used by AntD for searchability if optionFilterProp="label"
+                                        label={`${key.key_value_masked} (Expires: ${new Date(key.expires_at).toLocaleDateString()})`}
+                                        title={`Expires: ${new Date(key.expires_at).toLocaleString()}`} // Browser tooltip
+                                    >
+                                        {`${key.key_value_masked} (Expires: ${new Date(key.expires_at).toLocaleDateString()})`}
+                                        {key.id === editingAgent?.current_key_id && 
+                                         (editingAgent?.key_expires_at && new Date(editingAgent.key_expires_at) > new Date()) ? 
+                                         <Tag color="blue" style={{marginLeft: 5}}>Current</Tag> : ''}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Form>
+                </Modal>
+            )}
             {/* This is the final closing </Layout> tag for the top-level Layout */}
             </Layout>
     );

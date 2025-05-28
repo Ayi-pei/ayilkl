@@ -9,6 +9,7 @@ export interface AdminAgentListItem {
     account_status: 'enabled' | 'disabled';
     online_status: 'online' | 'offline' | 'away'; // Make sure backend provides this if displayed
     created_at: string;
+    current_key_id: string | null; // <<< ADDED THIS LINE / ENSURED IT'S PRESENT
     assigned_key_value_masked: string | null;
     key_expires_at: string | null;
 }
@@ -56,6 +57,349 @@ export const getAdminAgents = async (params: GetAgentsParams = {}): Promise<Pagi
     } catch (error: any) {
         console.error('Error fetching admin agents:', error.response?.data?.message || error.message);
         throw new Error(error.response?.data?.message || error.message || 'An unknown error occurred while fetching agents.');
+    }
+};
+
+// This function updates the 'is_active_manual' status of a key.
+// AdminGeneratedKeyDetails is a suitable return type as the backend returns the updated key.
+export const updateAdminKeyStatus = async (keyId: string, isActiveManual: boolean): Promise<AdminGeneratedKeyDetails> => {
+    try {
+        const response = await apiClient.put(`/admin/generated-keys/${keyId}/status`, 
+            { is_active_manual: isActiveManual }, // Payload
+            {
+                headers: {
+                    'X-Admin-Key': ADMIN_API_KEY,
+                },
+            }
+        );
+        // Backend PUT /api/admin/generated-keys/:keyId/status returns:
+        // res.json({ success: true, message: '...', data: updatedKey })
+        // where updatedKey is GeneratedKeyDetails
+        if (response.data && response.data.success && response.data.data) {
+            return response.data.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to update key status: Unexpected response structure.');
+        }
+    } catch (error: any) {
+        console.error(`Error updating key ${keyId} status:`, error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || `An unknown error occurred while updating status for key ${keyId}.`);
+    }
+};
+
+// This function updates the 'is_active_manual' status of a key.
+// AdminGeneratedKeyDetails is a suitable return type as the backend returns the updated key.
+export const updateAdminKeyStatus = async (keyId: string, isActiveManual: boolean): Promise<AdminGeneratedKeyDetails> => {
+    try {
+        const response = await apiClient.put(`/admin/generated-keys/${keyId}/status`, 
+            { is_active_manual: isActiveManual }, // Payload
+            {
+                headers: {
+                    'X-Admin-Key': ADMIN_API_KEY,
+                },
+            }
+        );
+        // Backend PUT /api/admin/generated-keys/:keyId/status returns:
+        // res.json({ success: true, message: '...', data: updatedKey })
+        // where updatedKey is GeneratedKeyDetails
+        if (response.data && response.data.success && response.data.data) {
+            return response.data.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to update key status: Unexpected response structure.');
+        }
+    } catch (error: any) {
+        console.error(`Error updating key ${keyId} status:`, error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || `An unknown error occurred while updating status for key ${keyId}.`);
+    }
+};
+
+// This function updates the 'is_active_manual' status of a key.
+// AdminGeneratedKeyDetails is a suitable return type as the backend returns the updated key.
+export const updateAdminKeyStatus = async (keyId: string, isActiveManual: boolean): Promise<AdminGeneratedKeyDetails> => {
+    try {
+        const response = await apiClient.put(`/admin/generated-keys/${keyId}/status`, 
+            { is_active_manual: isActiveManual }, // Payload
+            {
+                headers: {
+                    'X-Admin-Key': ADMIN_API_KEY,
+                },
+            }
+        );
+        // Backend PUT /api/admin/generated-keys/:keyId/status returns:
+        // res.json({ success: true, message: '...', data: updatedKey })
+        // where updatedKey is GeneratedKeyDetails
+        if (response.data && response.data.success && response.data.data) {
+            return response.data.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to update key status: Unexpected response structure.');
+        }
+    } catch (error: any) {
+        console.error(`Error updating key ${keyId} status:`, error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || `An unknown error occurred while updating status for key ${keyId}.`);
+    }
+};
+
+// This function updates the 'is_active_manual' status of a key.
+// AdminGeneratedKeyDetails is a suitable return type as the backend returns the updated key.
+export const updateAdminKeyStatus = async (keyId: string, isActiveManual: boolean): Promise<AdminGeneratedKeyDetails> => {
+    try {
+        const response = await apiClient.put(`/admin/generated-keys/${keyId}/status`, 
+            { is_active_manual: isActiveManual }, // Payload
+            {
+                headers: {
+                    'X-Admin-Key': ADMIN_API_KEY,
+                },
+            }
+        );
+        // Backend PUT /api/admin/generated-keys/:keyId/status returns:
+        // res.json({ success: true, message: '...', data: updatedKey })
+        // where updatedKey is GeneratedKeyDetails
+        if (response.data && response.data.success && response.data.data) {
+            return response.data.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to update key status: Unexpected response structure.');
+        }
+    } catch (error: any) {
+        console.error(`Error updating key ${keyId} status:`, error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || `An unknown error occurred while updating status for key ${keyId}.`);
+    }
+};
+
+// This function updates the 'is_active_manual' status of a key.
+// AdminGeneratedKeyDetails is a suitable return type as the backend returns the updated key.
+export const updateAdminKeyStatus = async (keyId: string, isActiveManual: boolean): Promise<AdminGeneratedKeyDetails> => {
+    try {
+        const response = await apiClient.put(`/admin/generated-keys/${keyId}/status`, 
+            { is_active_manual: isActiveManual }, // Payload
+            {
+                headers: {
+                    'X-Admin-Key': ADMIN_API_KEY,
+                },
+            }
+        );
+        // Backend PUT /api/admin/generated-keys/:keyId/status returns:
+        // res.json({ success: true, message: '...', data: updatedKey })
+        // where updatedKey is GeneratedKeyDetails
+        if (response.data && response.data.success && response.data.data) {
+            return response.data.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to update key status: Unexpected response structure.');
+        }
+    } catch (error: any) {
+        console.error(`Error updating key ${keyId} status:`, error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || `An unknown error occurred while updating status for key ${keyId}.`);
+    }
+};
+
+export interface AdminGeneratedKeyDetails { // Matches backend's GeneratedKeyDetails
+    id: string;
+    key_value: string; // Full key value
+    expires_at: string;
+    is_assigned: boolean;
+    assigned_agent_id: string | null;
+    is_active_manual: boolean;
+    created_at: string;
+    generated_by_admin_id: string | null;
+    last_used_at: string | null;
+}
+
+export const generateNewAdminKey = async (): Promise<AdminGeneratedKeyDetails> => {
+    try {
+        const response = await apiClient.post('/admin/generated-keys', {}, { // Empty payload for POST
+            headers: {
+                'X-Admin-Key': ADMIN_API_KEY,
+            },
+        });
+        // Backend POST /api/admin/generated-keys returns:
+        // res.status(201).json({ success: true, message: '...', data: newKey })
+        // where newKey is GeneratedKeyDetails
+        if (response.data && response.data.success && response.data.data) {
+            return response.data.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to generate new key: Unexpected response structure.');
+        }
+    } catch (error: any) {
+        console.error('Error generating new admin key:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || 'An unknown error occurred while generating a new key.');
+    }
+};
+
+// Interface for a key item in the admin list (more comprehensive than AdminKeyBasicInfo)
+export interface AdminGeneratedKeyListItem {
+    id: string;
+    key_value_masked: string;
+    expires_at: string;
+    is_assigned: boolean;
+    assigned_agent_id: string | null;
+    assigned_agent_nickname: string | null; // From related 'agents' table
+    is_active_manual: boolean;
+    is_expired: boolean; // Calculated field by backend or client
+    created_at: string;
+    last_used_at: string | null;
+    // generated_by_admin_id: string | null; // If you plan to show this
+}
+
+export interface PaginatedGeneratedKeysResponse {
+    data: AdminGeneratedKeyListItem[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+export interface GetGeneratedKeysParams {
+    page?: number;
+    limit?: number;
+    is_assigned?: boolean;
+    is_active_manual?: boolean;
+    search_key?: string; // For partial match on key_value
+    // Add sort_by, order etc. if backend supports
+}
+
+export const getAdminGeneratedKeys = async (params: GetGeneratedKeysParams = {}): Promise<PaginatedGeneratedKeysResponse> => {
+    try {
+        const response = await apiClient.get('/admin/generated-keys', {
+            params,
+            headers: {
+                'X-Admin-Key': ADMIN_API_KEY,
+            },
+        });
+        // Backend GET /api/admin/generated-keys returns:
+        // { success: true, data: keys, pagination: { ... } }
+        // where 'keys' is an array of objects matching AdminGeneratedKeyListItem structure
+        if (response.data && response.data.success) {
+             // The backend already calculates 'is_expired' and provides 'key_value_masked'
+            return {
+                data: response.data.data,
+                pagination: response.data.pagination,
+            };
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch generated keys: Unexpected response structure');
+        }
+    } catch (error: any) {
+        console.error('Error fetching admin generated keys:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || 'An unknown error occurred while fetching generated keys.');
+    }
+};
+
+// Interface for a key item in the admin list (more comprehensive than AdminKeyBasicInfo)
+export interface AdminGeneratedKeyListItem {
+    id: string;
+    key_value_masked: string;
+    expires_at: string;
+    is_assigned: boolean;
+    assigned_agent_id: string | null;
+    assigned_agent_nickname: string | null; // From related 'agents' table
+    is_active_manual: boolean;
+    is_expired: boolean; // Calculated field by backend or client
+    created_at: string;
+    last_used_at: string | null;
+    // generated_by_admin_id: string | null; // If you plan to show this
+}
+
+export interface PaginatedGeneratedKeysResponse {
+    data: AdminGeneratedKeyListItem[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+export interface GetGeneratedKeysParams {
+    page?: number;
+    limit?: number;
+    is_assigned?: boolean;
+    is_active_manual?: boolean;
+    search_key?: string; // For partial match on key_value
+    // Add sort_by, order etc. if backend supports
+}
+
+export const getAdminGeneratedKeys = async (params: GetGeneratedKeysParams = {}): Promise<PaginatedGeneratedKeysResponse> => {
+    try {
+        const response = await apiClient.get('/admin/generated-keys', {
+            params,
+            headers: {
+                'X-Admin-Key': ADMIN_API_KEY,
+            },
+        });
+        // Backend GET /api/admin/generated-keys returns:
+        // { success: true, data: keys, pagination: { ... } }
+        // where 'keys' is an array of objects matching AdminGeneratedKeyListItem structure
+        if (response.data && response.data.success) {
+             // The backend already calculates 'is_expired' and provides 'key_value_masked'
+            return {
+                data: response.data.data,
+                pagination: response.data.pagination,
+            };
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch generated keys: Unexpected response structure');
+        }
+    } catch (error: any) {
+        console.error('Error fetching admin generated keys:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || 'An unknown error occurred while fetching generated keys.');
+    }
+};
+
+// Interface for a key item in the admin list (more comprehensive than AdminKeyBasicInfo)
+export interface AdminGeneratedKeyListItem {
+    id: string;
+    key_value_masked: string;
+    expires_at: string;
+    is_assigned: boolean;
+    assigned_agent_id: string | null;
+    assigned_agent_nickname: string | null; // From related 'agents' table
+    is_active_manual: boolean;
+    is_expired: boolean; // Calculated field by backend or client
+    created_at: string;
+    last_used_at: string | null;
+    // generated_by_admin_id: string | null; // If you plan to show this
+}
+
+export interface PaginatedGeneratedKeysResponse {
+    data: AdminGeneratedKeyListItem[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+export interface GetGeneratedKeysParams {
+    page?: number;
+    limit?: number;
+    is_assigned?: boolean;
+    is_active_manual?: boolean;
+    search_key?: string; // For partial match on key_value
+    // Add sort_by, order etc. if backend supports
+}
+
+export const getAdminGeneratedKeys = async (params: GetGeneratedKeysParams = {}): Promise<PaginatedGeneratedKeysResponse> => {
+    try {
+        const response = await apiClient.get('/admin/generated-keys', {
+            params,
+            headers: {
+                'X-Admin-Key': ADMIN_API_KEY,
+            },
+        });
+        // Backend GET /api/admin/generated-keys returns:
+        // { success: true, data: keys, pagination: { ... } }
+        // where 'keys' is an array of objects matching AdminGeneratedKeyListItem structure
+        if (response.data && response.data.success) {
+             // The backend already calculates 'is_expired' and provides 'key_value_masked'
+            return {
+                data: response.data.data,
+                pagination: response.data.pagination,
+            };
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch generated keys: Unexpected response structure');
+        }
+    } catch (error: any) {
+        console.error('Error fetching admin generated keys:', error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || error.message || 'An unknown error occurred while fetching generated keys.');
     }
 };
 
