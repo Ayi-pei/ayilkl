@@ -10,6 +10,7 @@ import {
   TeamOutlined,
   UserOutlined,
   CalendarOutlined,
+  ReloadOutlined, // Added ReloadOutlined
 } from '@ant-design/icons';
 import {
   Button,
@@ -30,8 +31,20 @@ import {
   Tooltip,
   Typography,
   message,
+  Alert, // Added Alert
+  Spin, // Added Spin
 } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
+// Ensure AntD specific type imports are present
+import { ColumnsType, TablePaginationConfig } from 'antd/es/table'; 
+
+// Imports for the new admin functionality
+import { 
+    getAdminAgents, AdminAgentListItem, PaginatedAgentsResponse, GetAgentsParams, 
+    AdminKeyBasicInfo, getAvailableKeysForAssignment,
+    createAdminAgent, CreateAdminAgentPayload // Add these
+} from '../services/adminApiService';
+
 import { toast } from '../components/common/Toast';
 import { AdminService } from '../services/adminService';
 import { KeyService } from '../services/keyService';
@@ -42,8 +55,8 @@ import { Agent as AgentModel, AgentKey as AgentKeyModel, Stats as StatsModel } f
 import { StreamChat } from 'stream-chat';
 import { Chat, Channel, MessageList, MessageInput } from 'stream-chat-react';
 
-const { Header, Content, Sider } = Layout;
-const { Title, Text } = Typography;
+const { Header, Content, Sider } = Layout; // Sider might not be used with new layout
+const { Title, Text, Paragraph } = Typography; // Added Paragraph
 const { Option } = Select;
 const { confirm } = Modal;
 
@@ -100,34 +113,129 @@ const processAgentKey = (agentKey: AgentKeyModel): AgentKeyModel => ({
 
 // 示例：当获取所有客服后，对每个客服进行默认处理
 
-const STREAM_API_KEY = import.meta.env.VITE_STREAM_CHAT_API_KEY;
+const STREAM_API_KEY = import.meta.env.VITE_STREAM_CHAT_API_KEY; // This might be from old code, review if needed
 
 const AdminPage: React.FC = () => {
-  const { logout } = useAuthStore();
-  const [newAgentForm] = Form.useForm();
+    // State variables as requested by the subtask
+    const [agentsResponse, setAgentsResponse] = useState<PaginatedAgentsResponse | null>(null);
+    const [loading, setLoading] = useState<boolean>(true); // Ensured this is the boolean version
+    const [error, setError] = useState<string | null>(null);
+    
+    const [tableParams, setTableParams] = useState<GetAgentsParams>({
+        page: 1,
+        limit: 10,
+    });
+
+    const { userType, isAuthenticated, logout } = useAuthStore(); // Kept logout as it's used in old code
+    
+    // New state variables for Add Agent Modal
+    const [isAddAgentModalVisible, setIsAddAgentModalVisible] = useState<boolean>(false);
+    const [availableKeys, setAvailableKeys] = useState<AdminKeyBasicInfo[]>([]);
+    const [loadingKeys, setLoadingKeys] = useState<boolean>(false);
+    const [addAgentForm] = Form.useForm();
+    const [isSubmittingAgent, setIsSubmittingAgent] = useState<boolean>(false);
+    
+    // Remaining state variables from the old code structure, to be reviewed later for relevance
+    const [newAgentForm] = Form.useForm(); // This is duplicated by addAgentForm, consider removing. For now, keeping both as per file content.
+    const [activeMenu, setActiveMenu] = useState<string>('dashboard'); 
+    const [agents, setAgents] = useState<Agent[]>([]); 
+    const [keys, setKeys] = useState<AgentKey[]>([]); 
+    const [stats, setStats] = useState<Stats>({ 
+        totalCustomers: 0,
+        totalAgents: 0,
+        totalMessages: 0,
+        todayMessages: 0
+    });
+    // The object-based setLoading was removed by the previous diff, this is correct.
+    const [showAgentModal, setShowAgentModal] = useState(false); 
+    const [showKeyModal, setShowKeyModal] = useState(false);
+    const [selectedAgent, setSelectedAgent] = useState<string>('');
+    const [keyExpiryDays, setKeyExpiryDays] = useState<number>(30);
+    const [chatClient, setChatClient] = useState<StreamChat | null>(null);
   
-  // 状态
-  const [activeMenu, setActiveMenu] = useState<string>('dashboard');
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [keys, setKeys] = useState<AgentKey[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    totalCustomers: 0,
-    totalAgents: 0,
-    totalMessages: 0,
-    todayMessages: 0
-  });
-  const [loading, setLoading] = useState({
-    stats: false,
-    agents: false,
-    keys: false,
-    addingAgent: false
-  });
-  const [showAgentModal, setShowAgentModal] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState<string>('');
-  const [keyExpiryDays, setKeyExpiryDays] = useState<number>(30);
-  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
-  
+    const fetchAgents = useCallback(async (params: GetAgentsParams) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await getAdminAgents(params);
+            setAgentsResponse(response);
+        } catch (err: any) => {
+            setError(err.message || 'Failed to fetch agents.');
+            message.error(err.message || 'Failed to fetch agents.');
+            setAgentsResponse(null);
+        } finally {
+            setLoading(false);
+        }
+    }, []); // useCallback dependencies are empty if getAdminAgents doesn't rely on component scope variables that change
+
+    const showAddAgentModal = async () => {
+        setLoadingKeys(true);
+        addAgentForm.resetFields(); // Reset form before opening
+        try {
+            const keys = await getAvailableKeysForAssignment();
+            setAvailableKeys(keys);
+            setIsAddAgentModalVisible(true);
+        } catch (err: any) {
+            message.error(err.message || "Failed to fetch available keys for assignment.");
+            setAvailableKeys([]); // Clear keys on error
+        } finally {
+            setLoadingKeys(false);
+        }
+    };
+
+    const handleAddAgentCancel = () => {
+        setIsAddAgentModalVisible(false);
+        // addAgentForm.resetFields(); // Already done in showAddAgentModal or via Modal's destroyOnClose
+    };
+
+    const handleAddAgentOk = async () => {
+        try {
+            const values = await addAgentForm.validateFields();
+            setIsSubmittingAgent(true);
+            
+            const payload: CreateAdminAgentPayload = {
+                nickname: values.nickname || undefined, // Send undefined if empty, not an empty string unless API handles it
+                generated_key_id: values.generated_key_id,
+            };
+
+            await createAdminAgent(payload);
+            
+            message.success(`Agent '${payload.nickname || "Unnamed"}' created successfully!`);
+            setIsAddAgentModalVisible(false);
+            // addAgentForm.resetFields(); // destroyOnClose on Modal handles this
+            fetchAgents(tableParams); // Refresh the main agent list
+        } catch (error: any) {
+            // If error is from form validation (info object), it's handled by Form.
+            // This catch is primarily for API errors from createAdminAgent.
+            if (error.message) { // Check if error is an Error object with a message
+                 message.error(`Failed to create agent: ${error.message}`);
+            } else {
+                // For form validation errors that might not have a .message
+                console.log('Form validation failed or other error:', error);
+                message.error('Failed to create agent. Please check form values or try again.');
+            }
+        } finally {
+            setIsSubmittingAgent(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated && userType === 'admin') {
+            fetchAgents(tableParams);
+        } else if (isAuthenticated && userType !== 'admin') {
+            // If user is authenticated but not admin, show error message.
+            // The main auth check below will prevent rendering the admin content.
+            setError("Access Denied: You do not have admin privileges.");
+            setLoading(false);
+            setAgentsResponse(null);
+        } else if (!isAuthenticated) {
+            // User is not authenticated, might be redirected by a ProtectedRoute or show login.
+            // For now, just ensure loading stops and no data is shown.
+            setLoading(false);
+            setAgentsResponse(null);
+        }
+    }, [fetchAgents, tableParams, isAuthenticated, userType]);
+
   // 复制到剪贴板
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -939,17 +1047,213 @@ const AdminPage: React.FC = () => {
   // 监听所有客户频道
   const channel = client.channel('messaging', 'customer-service');
 
-  return (
-    <div className="admin-chat">
-      <h2>客服工作台</h2>
-      <Chat client={client} theme="messaging light">
-        <Channel channel={channel}>
-          <MessageList />
-          <MessageInput />
-        </Channel>
-      </Chat>
-    </div>
-  );
+    if (!isAuthenticated || userType !== 'admin') {
+        // If there's an error message (e.g. from the useEffect above), display it.
+        // Otherwise, show a generic access denied message.
+        const description = error || "You do not have permission to view this page. Please log in as an administrator.";
+        return (
+            <Layout style={{ minHeight: '100vh', padding: '50px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                {loading ? <Spin size="large" /> : <Alert message="Access Denied" description={description} type="error" showIcon />}
+            </Layout>
+        );
+    }
+
+    // This is the main return statement for the AdminPage component
+    return (
+        <Layout style={{ minHeight: '100vh' }}>
+            {/* Sidebar could be added here if needed for more admin sections */}
+            <Layout style={{ padding: '0 16px 16px' }}> {/* Main content layout area */}
+                <Content style={{ 
+                    background: '#fff', 
+                    padding: 20, 
+                    margin: '16px 0', 
+                    borderRadius: '8px', 
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)' 
+                }}>
+                    <Title level={4} style={{ marginBottom: 20, borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
+                        Agent Management Console
+                    </Title>
+                    
+                    <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+                        <Col xs={24} sm={24} md={10} lg={7} xl={6}>
+                            <Search
+                                placeholder="Search by nickname..."
+                                onSearch={(value) => {
+                                    setTableParams(prev => ({ ...prev, page: 1, search: value.trim() || undefined }));
+                                }}
+                                enterButton
+                                allowClear
+                                // value={tableParams.search} // Controlled component if needed, but defaultValue might be enough
+                                defaultValue={tableParams.search} 
+                            />
+                        </Col>
+                        <Col xs={24} sm={12} md={7} lg={5} xl={4}>
+                            <Select
+                                placeholder="Filter by account status"
+                                onChange={(value?: 'enabled' | 'disabled') => {
+                                    setTableParams(prev => ({ ...prev, page: 1, account_status: value }));
+                                }}
+                                style={{ width: '100%' }}
+                                allowClear
+                                value={tableParams.account_status}
+                            >
+                                <Option value="enabled">Enabled</Option>
+                                <Option value="disabled">Disabled</Option>
+                            </Select>
+                        </Col>
+                        <Col xs={24} sm={12} md={7} lg={5} xl={4}>
+                                <Button 
+                                    icon={<ReloadOutlined />} 
+                                    onClick={() => {
+                                        setError(null); 
+                                        fetchAgents(tableParams);
+                                    }} 
+                                    loading={loading} 
+                                    block
+                                >
+                                Refresh Data
+                            </Button>
+                        </Col>
+                        <Col xs={24} sm={12} md={7} lg={5} xl={4}> {/* Adjust column spans as needed */}
+                            <Button 
+                                type="primary" 
+                                onClick={showAddAgentModal} 
+                                block
+                                loading={loadingKeys} 
+                            >
+                                Add New Agent
+                            </Button>
+                        </Col>
+                    </Row>
+
+                    {error && !loading && (
+                        <Alert 
+                            message="Error Fetching Agents" 
+                            description={error} 
+                            type="error" 
+                            showIcon 
+                            closable 
+                            style={{ marginBottom: 16 }} 
+                            onClose={() => setError(null)} // Allow dismissing error
+                        />
+                    )}
+                    
+                    <Table<AdminAgentListItem>
+                        columns={[
+                            { title: 'ID', dataIndex: 'id', key: 'id', width: 180, ellipsis: true, fixed: 'left', sorter: (a, b) => a.id.localeCompare(b.id) },
+                            { title: 'Nickname', dataIndex: 'nickname', key: 'nickname', width: 150, sorter: (a,b) => (a.nickname || "").localeCompare(b.nickname || "") },
+                            { 
+                                title: 'Account Status', 
+                                dataIndex: 'account_status', 
+                                key: 'account_status',
+                                width: 150,
+                                render: (status: 'enabled' | 'disabled') => (
+                                    <Tag color={status === 'enabled' ? 'green' : 'red'}>{status.toUpperCase()}</Tag>
+                                ),
+                                // Server-side filtering is preferred for larger datasets.
+                                // Client-side example (can be removed if server-side is fully used via tableParams):
+                                // filters: [ {text: 'Enabled', value: 'enabled'}, {text: 'Disabled', value: 'disabled'}],
+                                // onFilter: (value, record) => record.account_status === value,
+                            },
+                            { 
+                                title: 'Online Status', 
+                                dataIndex: 'online_status', 
+                                key: 'online_status', 
+                                width: 130,
+                                render: (status: 'online' | 'offline' | 'away' | undefined) => {
+                                    let color = 'default';
+                                    if (status === 'online') color = 'blue';
+                                    else if (status === 'away') color = 'orange';
+                                    return <Tag color={color}>{status?.toUpperCase() || 'N/A'}</Tag>;
+                                }
+                            },
+                            { title: 'Created At', dataIndex: 'created_at', key: 'created_at', width: 180, render: (date: string) => new Date(date).toLocaleString(), sorter: (a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() },
+                            { title: 'Assigned Key', dataIndex: 'assigned_key_value_masked', key: 'assigned_key_value_masked', width: 150 },
+                            { title: 'Key Expires At', dataIndex: 'key_expires_at', key: 'key_expires_at', width: 180, render: (date: string | null) => date ? new Date(date).toLocaleString() : 'N/A', sorter: (a,b) => new Date(a.key_expires_at || 0).getTime() - new Date(b.key_expires_at || 0).getTime() },
+                            // { 
+                            //     title: 'Actions', 
+                            //     key: 'actions',
+                            //     fixed: 'right',
+                            //     width: 180,
+                            //     render: (_, record) => (
+                            //         <Space size="small">
+                            //             <Button type="link" size="small" onClick={() => console.log('Edit Agent', record.id)}>Edit</Button>
+                            //             <Button type="link" size="small" onClick={() => console.log('Assign Key', record.id)}>Assign Key</Button>
+                            //             <Button type="link" danger size="small" onClick={() => console.log('Delete Agent', record.id)}>Delete</Button>
+                            //         </Space>
+                            //     ),
+                            // },
+                        ]}
+                        dataSource={agentsResponse?.data || []}
+                        rowKey="id"
+                        pagination={{
+                            current: tableParams.page,
+                            pageSize: tableParams.limit,
+                            total: agentsResponse?.pagination?.total || 0,
+                            showSizeChanger: true,
+                            pageSizeOptions: ['10', '20', '50', '100'],
+                            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} agents`,
+                            position: ["bottomRight"],
+                        }}
+                        loading={loading}
+                        onChange={(pagination: TablePaginationConfig /*, filters, sorter */) => {
+                            setTableParams(prev => ({
+                                ...prev,
+                                page: pagination.current || 1,
+                                limit: pagination.pageSize || 10,
+                                // If using server-side sort/filter, get values from sorter/filters here
+                            }));
+                        }}
+                        scroll={{ x: 1200 }} 
+                        bordered
+                        size="default"
+                    />
+                    <Typography.Paragraph type="secondary" style={{marginTop: 15, fontSize: '0.85em', textAlign: 'center'}}>
+                        Note: "Online Status" is indicative and based on the last data refresh. For real-time status, WebSocket integration would be needed for this panel. Client-side sorting is enabled for some columns.
+                    </Typography.Paragraph>
+                </Content> 
+            </Layout> {/* This is the inner Layout closing tag */}
+
+                <Modal
+                    title="Add New Agent"
+                    open={isAddAgentModalVisible} /* Use 'open' for newer AntD versions */
+                    onOk={handleAddAgentOk}
+                    onCancel={handleAddAgentCancel}
+                    confirmLoading={isSubmittingAgent}
+                    destroyOnClose 
+                    forceRender /* Ensures form is available even if modal not visible initially */
+                >
+                    <Form form={addAgentForm} layout="vertical" name="add_agent_form_in_modal">
+                        <Form.Item
+                            name="nickname"
+                            label="Nickname"
+                            rules={[{ required: false, message: 'Agent nickname (optional)' }]}
+                        >
+                            <Input placeholder="Enter agent nickname (e.g., Agent Smith)" />
+                        </Form.Item>
+                        <Form.Item
+                            name="generated_key_id"
+                            label="Assign Key"
+                            rules={[{ required: true, message: 'You must select an available key!' }]}
+                        >
+                            <Select
+                                loading={loadingKeys}
+                                placeholder="Select an available key to assign"
+                                notFoundContent={loadingKeys ? <Spin size="small" /> : "No available keys (or error loading them)."}
+                                disabled={loadingKeys || availableKeys.length === 0}
+                            >
+                                {availableKeys.map(key => (
+                                    <Option key={key.id} value={key.id} title={`Expires: ${new Date(key.expires_at).toLocaleString()}`}>
+                                        {`${key.key_value_masked} (Expires: ${new Date(key.expires_at).toLocaleDateString()})`}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Form>
+                </Modal>
+            {/* This is the final closing </Layout> tag for the top-level Layout */}
+            </Layout>
+    );
 };
 
 // 示例：调用 getAllAgents，因类型提示问题，可临时使用类型断言

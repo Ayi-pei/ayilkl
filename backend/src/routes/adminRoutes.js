@@ -23,6 +23,10 @@ router.delete('/agents/:agentId', adminController.deleteAgent);
 
 router.get('/generated-keys', adminController.getGeneratedKeysList);
 
+router.post('/generated-keys', adminController.generateNewKey);
+
+router.put('/generated-keys/:keyId/status', adminController.updateKeyStatus);
+
 // Add other admin routes here later:
 // ... and so on for keys etc.
 

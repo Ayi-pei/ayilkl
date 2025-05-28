@@ -1,6 +1,7 @@
 // backend/src/services/adminService.js
 const supabase = require('../utils/supabaseClient');
 const { AppError } = require('../middlewares/error'); // Assuming AppError is used for error handling
+const { nanoid } = require('nanoid'); // Ensure nanoid is imported
 
 /**
  * @typedef {Object} AgentListItem
@@ -607,6 +608,255 @@ exports.listGeneratedKeys = async (filters = {}) => {
     }));
 
     return { keys, total: count || 0 };
+};
+
+/**
+ * @typedef {Object} GeneratedKeyDetails
+ * @property {string} id
+ * @property {string} key_value // The actual key string
+ * @property {string} expires_at
+ * @property {boolean} is_assigned
+ * @property {string | null} assigned_agent_id
+ * @property {boolean} is_active_manual
+ * @property {string} created_at
+ * @property {string | null} generated_by_admin_id // Optional: tracks which admin generated it
+ * @property {string | null} last_used_at // Though typically null on creation
+ */
+
+const DAILY_KEY_GENERATION_LIMIT = 30;
+
+/**
+ * Generates a new key, respecting daily limits.
+ * @param {object} [options]
+ * @param {string | null} [options.generated_by_admin_id] - Optional ID of admin who generated key.
+ * @returns {Promise<GeneratedKeyDetails>}
+ */
+exports.generateNewKey = async (options = {}) => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    // 1. Check Daily Limit
+    const { data: stats, error: statsError } = await supabase
+        .from('daily_key_generation_stats')
+        .select('generated_count')
+        .eq('generation_date', today)
+        .single();
+
+    if (statsError && statsError.code !== 'PGRST116') { // PGRST116: 0 rows, which is fine for first key of day
+        console.error('Database error when fetching key generation stats:', statsError.message);
+        throw new AppError('Failed to query key generation statistics.', 500, statsError.details || statsError.message);
+    }
+
+    const currentDailyCount = stats ? stats.generated_count : 0;
+    if (currentDailyCount >= DAILY_KEY_GENERATION_LIMIT) {
+        throw new AppError(`Daily key generation limit of ${DAILY_KEY_GENERATION_LIMIT} has been reached for ${today}. Cannot generate more keys today.`, 429); // 429 Too Many Requests
+    }
+
+    // 2. Generate Key Value and Expiry
+    // Using a prefix as hinted by user's example 'ayi_key_1_nano' and nanoid for randomness
+    const keyValue = `ayi_key_${nanoid(16)}`; // e.g., ayi_key_aBcDeFgHiJkLmNoP
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+    // 3. Insert New Key into 'generated_keys' table
+    const newKeyPayload = {
+        // id: nanoid(), // Supabase generates id by default if PK
+        key_value: keyValue,
+        expires_at: expiresAt.toISOString(),
+        is_active_manual: true,
+        is_assigned: false,
+        // assigned_agent_id: null, // DB default
+        // last_used_at: null,    // DB default
+        // created_at: now.toISOString(), // Supabase handles this by default if column is 'timestamp with time zone' and has default now()
+        generated_by_admin_id: options.generated_by_admin_id || null, 
+    };
+
+    const { data: newKeyData, error: insertKeyError } = await supabase
+        .from('generated_keys')
+        .insert(newKeyPayload)
+        .select() 
+        .single();
+
+    if (insertKeyError || !newKeyData) {
+        console.error('Database error when inserting new key:', insertKeyError ? insertKeyError.message : 'No data returned from key insertion.');
+        throw new AppError('Failed to generate and save new key.', 500, insertKeyError ? insertKeyError.details || insertKeyError.message : "Key insertion yielded no data.");
+    }
+
+    // 4. Update Daily Count (Upsert)
+    const newCount = currentDailyCount + 1;
+    const { error: upsertStatsError } = await supabase
+        .from('daily_key_generation_stats')
+        .upsert(
+            { generation_date: today, generated_count: newCount },
+            { onConflict: 'generation_date' } 
+        );
+
+    if (upsertStatsError) {
+        console.error(`CRITICAL: New key ${newKeyData.id} was generated, but failed to update daily generation stats for ${today}. Manual count adjustment may be needed. Error: ${upsertStatsError.message}`);
+        // Do not throw to user, as key generation was successful from their perspective.
+    }
+    
+    return {
+        id: newKeyData.id,
+        key_value: newKeyData.key_value, 
+        expires_at: newKeyData.expires_at,
+        is_assigned: newKeyData.is_assigned,
+        assigned_agent_id: newKeyData.assigned_agent_id,
+        is_active_manual: newKeyData.is_active_manual,
+        created_at: newKeyData.created_at,
+        generated_by_admin_id: newKeyData.generated_by_admin_id,
+        last_used_at: newKeyData.last_used_at, 
+    };
+};
+
+/**
+ * Updates a key's manual activation status.
+ * @param {string} keyId - The ID of the key to update.
+ * @param {boolean} isActiveManual - The new manual activation status (true or false).
+ * @returns {Promise<GeneratedKeyDetails>}
+ */
+exports.updateKeyStatus = async (keyId, isActiveManual) => {
+    // Controller has validated inputs (keyId is string, isActiveManual is boolean).
+
+    const updatePayload = {
+        is_active_manual: isActiveManual,
+        // If your 'generated_keys' table has an 'updated_at' column that you manage manually:
+        // updated_at: new Date().toISOString(), 
+    };
+
+    const { data: updatedKeyData, error } = await supabase
+        .from('generated_keys')
+        .update(updatePayload)
+        .eq('id', keyId)
+        .select() // Fetches all columns of the updated row
+        .single(); // Expects a single row to be affected/returned
+
+    if (error) {
+        // Supabase error code 'PGRST116' indicates that no rows were returned,
+        // implying the keyId was not found for an update operation on a single row.
+        if (error.code === 'PGRST116') { 
+            throw new AppError(`Key with ID ${keyId} not found. Cannot update status.`, 404);
+        }
+        // For other database errors
+        console.error(`Database error when updating key ${keyId} status:`, error.message);
+        throw new AppError(`Failed to update status for key ${keyId}.`, 500, error.details || error.message);
+    }
+    
+    // If data is null and no error, it might also mean not found, though PGRST116 should cover it.
+    if (!updatedKeyData) { 
+        throw new AppError(`Key with ID ${keyId} not found after status update attempt.`, 404);
+    }
+
+    // Return details of the updated key, conforming to GeneratedKeyDetails
+    return {
+        id: updatedKeyData.id,
+        key_value: updatedKeyData.key_value, // Return full key value for admin confirmation
+        expires_at: updatedKeyData.expires_at,
+        is_assigned: updatedKeyData.is_assigned,
+        assigned_agent_id: updatedKeyData.assigned_agent_id,
+        is_active_manual: updatedKeyData.is_active_manual,
+        created_at: updatedKeyData.created_at,
+        generated_by_admin_id: updatedKeyData.generated_by_admin_id,
+        last_used_at: updatedKeyData.last_used_at,
+    };
+};
+
+/**
+ * Performs daily cleanup of expired keys and associated agents if necessary.
+ * This function is intended to be called by a scheduled job (cron).
+ * It logs its actions and errors to the console.
+ * @returns {Promise<{cleanedKeysCount: number, cleanedAgentsCount: number, errors: Array<{step: string, message: string, [key: string]: any}>}>} Summary of actions.
+ */
+exports.performDailyKeyCleanup = async () => {
+    const now = new Date();
+    const errors = [];
+    let cleanedKeysCount = 0;
+    let cleanedAgentsCount = 0;
+
+    const logPrefix = '[DailyCleanupJob]';
+    console.log(`${logPrefix} Starting daily key cleanup at ${now.toISOString()}`);
+
+    // 1. Identify Expired Keys
+    // Keys that expired strictly before the current moment.
+    const { data: expiredKeys, error: fetchExpiredKeysError } = await supabase
+        .from('generated_keys')
+        .select('id, assigned_agent_id, key_value') // key_value for logging purposes
+        .lt('expires_at', now.toISOString());
+
+    if (fetchExpiredKeysError) {
+        console.error(`${logPrefix} Error fetching expired keys: ${fetchExpiredKeysError.message}`);
+        errors.push({ step: 'fetch_expired_keys', message: fetchExpiredKeysError.message });
+        // Decide if to proceed with resetting daily count or halt. For robustness, try to reset stats.
+    } else if (expiredKeys && expiredKeys.length > 0) {
+        console.log(`${logPrefix} Found ${expiredKeys.length} expired keys to process.`);
+        for (const key of expiredKeys) {
+            try {
+                // 2a. If key was assigned to an agent, delete the agent first (as per user confirmation)
+                if (key.assigned_agent_id) {
+                    console.log(`${logPrefix} Key ${key.id} (value: ${maskKeyValue(key.key_value)}) was assigned to agent ${key.assigned_agent_id}. Attempting to delete agent...`);
+                    const { error: deleteAgentError } = await supabase
+                        .from('agents')
+                        .delete()
+                        .eq('id', key.assigned_agent_id);
+
+                    if (deleteAgentError) {
+                        console.error(`${logPrefix} Failed to delete agent ${key.assigned_agent_id} for expired key ${key.id}. Error: ${deleteAgentError.message}`);
+                        errors.push({ step: 'delete_agent', agentId: key.assigned_agent_id, keyId: key.id, message: deleteAgentError.message });
+                        // Even if agent deletion fails, proceed to delete the key to prevent reprocessing.
+                    } else {
+                        cleanedAgentsCount++;
+                        console.log(`${logPrefix} Successfully deleted agent ${key.assigned_agent_id}.`);
+                    }
+                }
+
+                // 2b. Delete the expired key itself
+                const { error: deleteKeyError } = await supabase
+                    .from('generated_keys')
+                    .delete()
+                    .eq('id', key.id);
+
+                if (deleteKeyError) {
+                    console.error(`${logPrefix} Failed to delete expired key ${key.id}. Error: ${deleteKeyError.message}`);
+                    errors.push({ step: 'delete_key', keyId: key.id, message: deleteKeyError.message });
+                } else {
+                    cleanedKeysCount++;
+                    console.log(`${logPrefix} Successfully deleted expired key ${key.id} (value: ${maskKeyValue(key.key_value)}).`);
+                }
+            } catch (loopError) { 
+                 console.error(`${logPrefix} Unexpected error processing key ${key.id} within loop: ${loopError.message}`);
+                 errors.push({ step: 'process_key_loop', keyId: key.id, message: loopError.message });
+            }
+        }
+    } else {
+        console.log(`${logPrefix} No expired keys found to clean up.`);
+    }
+
+    // 3. Reset Daily Generation Count for the CURRENT calendar day
+    // This ensures that if the job runs late, it still resets for 'today'.
+    // If it runs at 00:00:01, 'today' is the new day, which is correct.
+    const todayForStats = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const { error: upsertStatsError } = await supabase
+        .from('daily_key_generation_stats')
+        .upsert(
+            { generation_date: todayForStats, generated_count: 0 },
+            { onConflict: 'generation_date' } // If 'generation_date' exists, update 'generated_count', else insert.
+        );
+
+    if (upsertStatsError) {
+        console.error(`${logPrefix} CRITICAL: Failed to reset daily key generation stats for ${todayForStats}. Error: ${upsertStatsError.message}`);
+        errors.push({ step: 'reset_daily_stats', date: todayForStats, message: upsertStatsError.message });
+    } else {
+        console.log(`${logPrefix} Successfully reset daily key generation count for ${todayForStats} to 0.`);
+    }
+
+    console.log(`${logPrefix} Daily key cleanup finished. Processed Keys: ${cleanedKeysCount}, Deleted Agents: ${cleanedAgentsCount}. Errors encountered: ${errors.length}`);
+    
+    // This function is for a cron job, so it might not return to an HTTP client.
+    // Returning a summary can be useful for logging by the caller of this function.
+    return {
+        cleanedKeysCount,
+        cleanedAgentsCount,
+        errors 
+    };
 };
 
 // Add other admin-related service functions here later

@@ -246,4 +246,59 @@ exports.getGeneratedKeysList = async (req, res, next) => {
     }
 };
 
+/**
+ * Handles the request to generate a new key.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+exports.generateNewKey = async (req, res, next) => {
+    try {
+        // If you had admin user context from middleware, you could pass it here:
+        // const adminId = req.adminUser ? req.adminUser.id : null;
+        // const newKey = await adminService.generateNewKey({ generated_by_admin_id: adminId });
+        
+        const newKey = await adminService.generateNewKey(); // Service handles logic including daily limits
+
+        res.status(201).json({
+            success: true,
+            message: 'New key generated successfully.',
+            data: newKey // Service should return details of the new key
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Handles the request to update a key's manual activation status.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+exports.updateKeyStatus = async (req, res, next) => {
+    try {
+        const { keyId } = req.params;
+        const { is_active_manual } = req.body;
+
+        if (!keyId || typeof keyId !== 'string' || keyId.trim() === '') {
+            return next(new AppError('Invalid or missing keyId in path parameters.', 400));
+        }
+        
+        // Validate is_active_manual
+        if (typeof is_active_manual !== 'boolean') {
+            return next(new AppError('Invalid or missing is_active_manual in request body. It must be a boolean value (true or false).', 400));
+        }
+
+        const updatedKey = await adminService.updateKeyStatus(keyId, is_active_manual);
+        res.json({
+            success: true,
+            message: `Key ${keyId} manual activation status successfully updated to ${is_active_manual}.`,
+            data: updatedKey // Service should return details of the updated key
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // Add other admin-related controller functions here later
