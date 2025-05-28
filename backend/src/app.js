@@ -65,18 +65,14 @@ app.get('/api/test-db', async (req, res) => {
 // 路由导入
 const apiRoutes = require('./routes/apiRoutes');
 const keysRoutes = require('./routes/keys');
-const adminApi = require('../api/adminApi'); // 添加管理员API路由导入
+const adminRoutes = require('./routes/adminRoutes'); // Added admin routes
 
 // 应用路由
 app.use('/api', apiRoutes);
 app.use('/api/keys', keysRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-if (adminApi) {
-  app.use('/api/admin', adminApi); // 添加管理员API路由
-} else {
-  console.warn('adminApi router is undefined, skipping /api/admin route');
-}
+app.use('/api/admin', adminRoutes); // Added admin routes
 
 // 健康检查路由
 app.get('/health', (req, res) => {
